@@ -1,0 +1,31 @@
+export const TYPE_COLOR = {
+  material: "#4fd1c5",
+  process: "#f6ad55",
+  experiment: "#ed8936",
+  property: "#63b3ed",
+  condition: "#b794f4",
+  equipment: "#f687b3",
+  facility: "#38b2ac",
+  team: "#68d391",
+  expert: "#a3e635",
+  topic: "#fbd38d",
+  publication: "#e2e8f0",
+  conclusion: "#fc8181",
+  ghost: "#4a5568",
+};
+
+export const TYPE_LABEL = {
+  material: "Материал",
+  process: "Процесс",
+  experiment: "Эксперимент",
+  property: "Свойство",
+  condition: "Условие",
+  equipment: "Оборудование",
+  facility: "Предприятие",
+  team: "Лаборатория",
+  expert: "Эксперт",
+  topic: "Тема",
+  publication: "Публикация",
+  conclusion: "Вывод",
+  ghost: "Пробел",
+};

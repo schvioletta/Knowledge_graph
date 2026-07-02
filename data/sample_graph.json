@@ -1,0 +1,1577 @@
+{
+  "directed": true,
+  "multigraph": true,
+  "graph": {},
+  "nodes": [
+    {
+      "type": "material",
+      "name": "Оборотная вода обогатительной фабрики",
+      "id": "mat_process_water"
+    },
+    {
+      "type": "material",
+      "name": "Пермеат (умягчённая вода)",
+      "id": "mat_permeate"
+    },
+    {
+      "type": "material",
+      "name": "Никелевый катод",
+      "id": "mat_nickel_cathode"
+    },
+    {
+      "type": "material",
+      "name": "Католит",
+      "id": "mat_catholyte"
+    },
+    {
+      "type": "material",
+      "name": "Анолит",
+      "id": "mat_anolyte"
+    },
+    {
+      "type": "material",
+      "name": "Медный штейн",
+      "id": "mat_copper_matte"
+    },
+    {
+      "type": "material",
+      "name": "Никелевый штейн",
+      "id": "mat_nickel_matte"
+    },
+    {
+      "type": "material",
+      "name": "Шлак",
+      "id": "mat_slag"
+    },
+    {
+      "type": "material",
+      "name": "Никелевая руда (окисленная)",
+      "id": "mat_nickel_ore"
+    },
+    {
+      "type": "material",
+      "name": "Медная руда (сульфидная)",
+      "id": "mat_copper_ore"
+    },
+    {
+      "type": "material",
+      "name": "Шахтная вода",
+      "id": "mat_mine_water"
+    },
+    {
+      "type": "material",
+      "name": "Техногенный гипс",
+      "id": "mat_gypsum"
+    },
+    {
+      "type": "process",
+      "name": "Обратный осмос",
+      "id": "proc_ro"
+    },
+    {
+      "type": "process",
+      "name": "Ионный обмен",
+      "id": "proc_ion_exchange"
+    },
+    {
+      "type": "process",
+      "name": "Электродиализ",
+      "id": "proc_electrodialysis"
+    },
+    {
+      "type": "process",
+      "name": "Известково-содовое умягчение",
+      "id": "proc_lime_soda"
+    },
+    {
+      "type": "process",
+      "name": "Электроэкстракция никеля",
+      "id": "proc_electrowinning_ni"
+    },
+    {
+      "type": "process",
+      "name": "Плавка медного концентрата на штейн",
+      "id": "proc_smelting_cu"
+    },
+    {
+      "type": "process",
+      "name": "Плавка никелевого концентрата на штейн",
+      "id": "proc_smelting_ni"
+    },
+    {
+      "type": "process",
+      "name": "Кучное выщелачивание",
+      "id": "proc_heap_leaching"
+    },
+    {
+      "type": "process",
+      "name": "Закачка в глубокие горизонты",
+      "id": "proc_deep_injection"
+    },
+    {
+      "type": "condition",
+      "name": "Холодный климат",
+      "id": "cond_cold"
+    },
+    {
+      "type": "condition",
+      "name": "Умеренный климат",
+      "id": "cond_temperate"
+    },
+    {
+      "type": "condition",
+      "name": "Аридный климат",
+      "id": "cond_arid"
+    },
+    {
+      "type": "property",
+      "name": "Сухой остаток",
+      "id": "prop_dry_residue"
+    },
+    {
+      "type": "property",
+      "name": "Скорость циркуляции католита",
+      "id": "prop_catholyte_flow"
+    },
+    {
+      "type": "property",
+      "name": "Коэффициент распределения Au",
+      "id": "prop_au_distribution"
+    },
+    {
+      "type": "property",
+      "name": "Коэффициент распределения Ag",
+      "id": "prop_ag_distribution"
+    },
+    {
+      "type": "property",
+      "name": "Коэффициент распределения МПГ",
+      "id": "prop_pgm_distribution"
+    },
+    {
+      "type": "property",
+      "name": "Технико-экономические показатели",
+      "id": "prop_techno_economic"
+    },
+    {
+      "type": "property",
+      "name": "Степень извлечения металла",
+      "id": "prop_extraction_rate"
+    },
+    {
+      "type": "equipment",
+      "name": "Установка обратного осмоса",
+      "id": "eq_ro_unit"
+    },
+    {
+      "type": "equipment",
+      "name": "Ванна электроэкстракции с диафрагменными ячейками",
+      "id": "eq_ew_cell_diaphragm"
+    },
+    {
+      "type": "equipment",
+      "name": "Ванна электроэкстракции без диафрагмы",
+      "id": "eq_ew_cell_open"
+    },
+    {
+      "type": "equipment",
+      "name": "Печь взвешенной плавки (ПВП)",
+      "id": "eq_flash_furnace"
+    },
+    {
+      "type": "equipment",
+      "name": "Скважина глубокого заложения",
+      "id": "eq_deep_well"
+    },
+    {
+      "type": "equipment",
+      "name": "Штабель кучного выщелачивания",
+      "id": "eq_heap_pad"
+    },
+    {
+      "type": "facility",
+      "name": "Обогатительная фабрика №3 (Норильск)",
+      "country": "RU",
+      "id": "fac_concentrator_norilsk"
+    },
+    {
+      "type": "facility",
+      "name": "Concentrator Plant (Escondida, Чили)",
+      "country": "INTL",
+      "id": "fac_concentrator_escondida"
+    },
+    {
+      "type": "facility",
+      "name": "Медно-никелевый комбинат (Мончегорск)",
+      "country": "RU",
+      "id": "fac_smelter_monchegorsk"
+    },
+    {
+      "type": "facility",
+      "name": "Smelter Complex (Sudbury, Канада)",
+      "country": "INTL",
+      "id": "fac_smelter_sudbury"
+    },
+    {
+      "type": "facility",
+      "name": "Угольная шахта (Кузбасс)",
+      "country": "RU",
+      "id": "fac_mine_kuzbass"
+    },
+    {
+      "type": "facility",
+      "name": "Steinkohle Mine (Рурский бассейн, Германия)",
+      "country": "INTL",
+      "id": "fac_mine_germany"
+    },
+    {
+      "type": "facility",
+      "name": "Опытный полигон КВ (Забайкалье)",
+      "country": "RU",
+      "id": "fac_heap_site_ru"
+    },
+    {
+      "type": "team",
+      "name": "Лаборатория водоподготовки",
+      "id": "team_water_lab"
+    },
+    {
+      "type": "team",
+      "name": "Лаборатория гидрометаллургии",
+      "id": "team_hydromet"
+    },
+    {
+      "type": "team",
+      "name": "Лаборатория пирометаллургии",
+      "id": "team_pyromet"
+    },
+    {
+      "type": "team",
+      "name": "Группа геотехнологий и закачки вод",
+      "id": "team_geotech"
+    },
+    {
+      "type": "expert",
+      "name": "Смирнова И.П.",
+      "id": "expert_smirnova"
+    },
+    {
+      "type": "expert",
+      "name": "Баранов Д.С.",
+      "id": "expert_baranov"
+    },
+    {
+      "type": "expert",
+      "name": "Li Wei",
+      "id": "expert_li"
+    },
+    {
+      "type": "expert",
+      "name": "Johansson E.",
+      "id": "expert_johansson"
+    },
+    {
+      "type": "expert",
+      "name": "Kowalski T.",
+      "id": "expert_kowalski"
+    },
+    {
+      "type": "expert",
+      "name": "Фёдоров А.В.",
+      "id": "expert_fedorov"
+    },
+    {
+      "type": "topic",
+      "name": "Водоподготовка и обессоливание",
+      "id": "topic_water"
+    },
+    {
+      "type": "topic",
+      "name": "Электроэкстракция",
+      "id": "topic_electrowinning"
+    },
+    {
+      "type": "topic",
+      "name": "Плавка и распределение металлов",
+      "id": "topic_smelting"
+    },
+    {
+      "type": "topic",
+      "name": "Выщелачивание",
+      "id": "topic_leaching"
+    },
+    {
+      "type": "topic",
+      "name": "Шахтные и рудничные воды",
+      "id": "topic_mine_water"
+    },
+    {
+      "type": "publication",
+      "name": "Опыт применения обратного осмоса для доочистки оборотной воды ОФ",
+      "date": "2022-04-12",
+      "country": "RU",
+      "confidence": "высокая",
+      "id": "pub_ro_2022"
+    },
+    {
+      "type": "publication",
+      "name": "Ионообменное умягчение технической воды: пилотные испытания",
+      "date": "2021-09-03",
+      "country": "RU",
+      "confidence": "средняя",
+      "id": "pub_ix_2021"
+    },
+    {
+      "type": "publication",
+      "name": "Electrodialysis for process water desalination in mineral processing",
+      "date": "2020-11-20",
+      "country": "INTL",
+      "confidence": "высокая",
+      "id": "pub_ed_2020"
+    },
+    {
+      "type": "publication",
+      "name": "Известково-содовое умягчение: ограничения метода при повышенной сульфатности",
+      "date": "2019-05-15",
+      "country": "RU",
+      "confidence": "средняя",
+      "id": "pub_ls_2019"
+    },
+    {
+      "type": "publication",
+      "name": "Циркуляция католита при электроэкстракции никеля: опыт комбината",
+      "date": "2023-02-08",
+      "country": "RU",
+      "confidence": "высокая",
+      "id": "pub_ew_ru_2023"
+    },
+    {
+      "type": "publication",
+      "name": "Catholyte flow optimization in nickel electrowinning cells",
+      "date": "2022-07-01",
+      "country": "INTL",
+      "confidence": "высокая",
+      "id": "pub_ew_intl_2022"
+    },
+    {
+      "type": "publication",
+      "name": "Распределение благородных металлов между медным штейном и шлаком",
+      "date": "2023-10-11",
+      "country": "RU",
+      "confidence": "высокая",
+      "id": "pub_smelt_cu_2023"
+    },
+    {
+      "type": "publication",
+      "name": "PGM and gold distribution between nickel matte and slag in flash smelting",
+      "date": "2022-03-19",
+      "country": "INTL",
+      "confidence": "высокая",
+      "id": "pub_smelt_ni_2022"
+    },
+    {
+      "type": "publication",
+      "name": "Влияние состава шихты на извлечение серебра в штейн",
+      "date": "2021-06-06",
+      "country": "RU",
+      "confidence": "средняя",
+      "id": "pub_smelt_cu_2021"
+    },
+    {
+      "type": "publication",
+      "name": "Кучное выщелачивание медных руд в условиях умеренного климата",
+      "date": "2021-08-14",
+      "country": "RU",
+      "confidence": "средняя",
+      "id": "pub_heap_cu_2021"
+    },
+    {
+      "type": "publication",
+      "name": "Закачка шахтных вод в глубокие горизонты: опыт угольных бассейнов России",
+      "date": "2020-02-27",
+      "country": "RU",
+      "confidence": "средняя",
+      "id": "pub_deep_inj_ru_2020"
+    },
+    {
+      "type": "publication",
+      "name": "Deep well injection of mine water: German experience",
+      "date": "2019-12-05",
+      "country": "INTL",
+      "confidence": "высокая",
+      "id": "pub_deep_inj_de_2019"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ro_01",
+      "sulfate_mg_l": 260,
+      "chloride_mg_l": 240,
+      "calcium_mg_l": 220,
+      "magnesium_mg_l": 210,
+      "sodium_mg_l": 230,
+      "dry_residue_mg_l": 450,
+      "date": "2022-03-01",
+      "country": "RU",
+      "confidence": "высокая",
+      "effect": "Сухой остаток снижен с ~3500 до 450 мг/дм³ при исходных сульфатах/хлоридах/Ca/Mg/Na на уровне 200-260 мг/л",
+      "id": "exp_ro_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Обратный осмос устойчиво даёт сухой остаток ниже 1000 мг/дм³ при указанном составе воды — рекомендован как основной метод.",
+      "date": "2022-03-01",
+      "country": "RU",
+      "confidence": "высокая",
+      "source": "pub_ro_2022",
+      "id": "concl_ro_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ix_01",
+      "sulfate_mg_l": 280,
+      "chloride_mg_l": 250,
+      "calcium_mg_l": 240,
+      "magnesium_mg_l": 200,
+      "sodium_mg_l": 260,
+      "dry_residue_mg_l": 800,
+      "date": "2021-08-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "effect": "Сухой остаток снижен до 800 мг/дм³, но требуется частая регенерация смолы",
+      "id": "exp_ix_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Ионный обмен укладывается в требование ≤1000 мг/дм³, но эксплуатационные затраты выше, чем у обратного осмоса.",
+      "date": "2021-08-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "source": "pub_ix_2021",
+      "id": "concl_ix_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ed_01",
+      "sulfate_mg_l": 300,
+      "chloride_mg_l": 270,
+      "calcium_mg_l": 250,
+      "magnesium_mg_l": 220,
+      "sodium_mg_l": 280,
+      "dry_residue_mg_l": 950,
+      "date": "2020-10-15",
+      "country": "INTL",
+      "confidence": "высокая",
+      "effect": "Dry residue reduced to 950 mg/dm3 at similar feed composition",
+      "id": "exp_ed_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Электродиализ применим при указанных концентрациях, но ближе к верхней границе допустимого сухого остатка.",
+      "date": "2020-10-15",
+      "country": "INTL",
+      "confidence": "высокая",
+      "source": "pub_ed_2020",
+      "id": "concl_ed_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ls_01",
+      "sulfate_mg_l": 290,
+      "chloride_mg_l": 260,
+      "calcium_mg_l": 230,
+      "magnesium_mg_l": 215,
+      "sodium_mg_l": 240,
+      "dry_residue_mg_l": 1500,
+      "date": "2019-04-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "effect": "Сухой остаток снижен только до 1500 мг/дм³, требование ≤1000 не достигнуто",
+      "id": "exp_ls_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Известково-содовое умягчение НЕ подходит при сульфатности ≥250 мг/л — не обеспечивает нужный сухой остаток.",
+      "date": "2019-04-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "source": "pub_ls_2019",
+      "id": "concl_ls_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ew_ru_01",
+      "catholyte_flow_rate_m3_h": 2.5,
+      "current_density_a_m2": 300,
+      "date": "2023-01-20",
+      "country": "RU",
+      "confidence": "высокая",
+      "effect": "При скорости циркуляции 2.5 м³/ч на ячейку достигнута стабильная плотность катода без дендритов",
+      "id": "exp_ew_ru_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Оптимальная скорость циркуляции католита в диафрагменных ячейках — около 2.5 м³/ч на ячейку.",
+      "date": "2023-01-20",
+      "country": "RU",
+      "confidence": "высокая",
+      "source": "pub_ew_ru_2023",
+      "id": "concl_ew_ru_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_ew_intl_01",
+      "catholyte_flow_rate_m3_h": 4.0,
+      "current_density_a_m2": 320,
+      "date": "2022-05-10",
+      "country": "INTL",
+      "confidence": "высокая",
+      "effect": "Flow rate of 4.0 m3/h per cell minimized concentration polarization in open cells",
+      "id": "exp_ew_intl_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "В открытых (бездиафрагменных) ячейках оптимальная скорость циркуляции — около 4.0 м³/ч на ячейку.",
+      "date": "2022-05-10",
+      "country": "INTL",
+      "confidence": "высокая",
+      "source": "pub_ew_intl_2022",
+      "id": "concl_ew_intl_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_smelt_cu_01",
+      "au_distribution_pct": 97.5,
+      "ag_distribution_pct": 92.0,
+      "pgm_distribution_pct": 85.0,
+      "date": "2023-09-01",
+      "country": "RU",
+      "confidence": "высокая",
+      "effect": "97.5% Au, 92% Ag и 85% МПГ перешли в медный штейн при стандартной шихте",
+      "id": "exp_smelt_cu_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "При плавке на медный штейн подавляющая часть Au/Ag/МПГ концентрируется в штейне, потери со шлаком минимальны для Au.",
+      "date": "2023-09-01",
+      "country": "RU",
+      "confidence": "высокая",
+      "source": "pub_smelt_cu_2023",
+      "id": "concl_smelt_cu_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_smelt_ni_01",
+      "au_distribution_pct": 94.0,
+      "pgm_distribution_pct": 90.0,
+      "date": "2022-02-14",
+      "country": "INTL",
+      "confidence": "высокая",
+      "effect": "94% Au and 90% PGM reported to nickel matte in flash smelting",
+      "id": "exp_smelt_ni_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Для никелевого штейна распределение МПГ в штейн выше, чем для медного, за счёт более высокой сульфидной ёмкости.",
+      "date": "2022-02-14",
+      "country": "INTL",
+      "confidence": "высокая",
+      "source": "pub_smelt_ni_2022",
+      "id": "concl_smelt_ni_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_smelt_cu_02",
+      "ag_distribution_pct": 88.0,
+      "date": "2021-05-20",
+      "country": "RU",
+      "confidence": "средняя",
+      "effect": "Снижение содержания серебра в шихте на 15% снизило переход Ag в штейн до 88%",
+      "id": "exp_smelt_cu_02"
+    },
+    {
+      "type": "conclusion",
+      "name": "Извлечение серебра в штейн чувствительно к содержанию Ag в исходной шихте — рекомендован контроль состава сырья.",
+      "date": "2021-05-20",
+      "country": "RU",
+      "confidence": "средняя",
+      "source": "pub_smelt_cu_2021",
+      "id": "concl_smelt_cu_02"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_heap_cu_01",
+      "extraction_rate_pct": 78.0,
+      "leach_days": 120,
+      "date": "2021-07-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "effect": "Извлечение меди 78% за 120 суток орошения в умеренном климате",
+      "id": "exp_heap_cu_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Кучное выщелачивание медных руд эффективно в умеренном климате при стандартном орошении.",
+      "date": "2021-07-01",
+      "country": "RU",
+      "confidence": "средняя",
+      "source": "pub_heap_cu_2021",
+      "id": "concl_heap_cu_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_deep_inj_ru_01",
+      "capex_musd": 4.2,
+      "opex_musd_year": 0.6,
+      "capacity_m3_day": 1200,
+      "injection_depth_m": 850,
+      "date": "2020-01-15",
+      "country": "RU",
+      "confidence": "средняя",
+      "effect": "Закачка 1200 м³/сут на глубину 850 м, капзатраты 4.2 млн $, опекс 0.6 млн $/год",
+      "id": "exp_deep_inj_ru_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "Закачка в глубокие горизонты в РФ экономически оправдана при производительности от 1000 м³/сут и глубине 700-900 м.",
+      "date": "2020-01-15",
+      "country": "RU",
+      "confidence": "средняя",
+      "source": "pub_deep_inj_ru_2020",
+      "id": "concl_deep_inj_ru_01"
+    },
+    {
+      "type": "experiment",
+      "name": "Эксперимент exp_deep_inj_de_01",
+      "capex_musd": 6.8,
+      "opex_musd_year": 0.9,
+      "capacity_m3_day": 2000,
+      "injection_depth_m": 1100,
+      "date": "2019-11-01",
+      "country": "INTL",
+      "confidence": "высокая",
+      "effect": "Injection of 2000 m3/day at 1100 m depth, capex $6.8M, opex $0.9M/year",
+      "id": "exp_deep_inj_de_01"
+    },
+    {
+      "type": "conclusion",
+      "name": "German practice favors deeper injection (1000+ m) with higher capacity and stricter monitoring requirements than typical RU projects.",
+      "date": "2019-11-01",
+      "country": "INTL",
+      "confidence": "высокая",
+      "source": "pub_deep_inj_de_2019",
+      "id": "concl_deep_inj_de_01"
+    }
+  ],
+  "links": [
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_smirnova",
+      "target": "team_water_lab",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_baranov",
+      "target": "team_hydromet",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_li",
+      "target": "team_pyromet",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_johansson",
+      "target": "team_hydromet",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_kowalski",
+      "target": "team_geotech",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "MEMBER_OF",
+      "source": "expert_fedorov",
+      "target": "team_geotech",
+      "key": "MEMBER_OF"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ro_2022",
+      "target": "topic_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ro_2022",
+      "target": "expert_smirnova",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ro_2022",
+      "target": "exp_ro_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ix_2021",
+      "target": "topic_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ix_2021",
+      "target": "expert_smirnova",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ix_2021",
+      "target": "exp_ix_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ed_2020",
+      "target": "topic_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ed_2020",
+      "target": "expert_johansson",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ed_2020",
+      "target": "exp_ed_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ls_2019",
+      "target": "topic_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ls_2019",
+      "target": "expert_smirnova",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ls_2019",
+      "target": "exp_ls_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ew_ru_2023",
+      "target": "topic_electrowinning",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ew_ru_2023",
+      "target": "expert_baranov",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ew_ru_2023",
+      "target": "exp_ew_ru_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_ew_intl_2022",
+      "target": "topic_electrowinning",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_ew_intl_2022",
+      "target": "expert_johansson",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_ew_intl_2022",
+      "target": "exp_ew_intl_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_smelt_cu_2023",
+      "target": "topic_smelting",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_smelt_cu_2023",
+      "target": "expert_li",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_smelt_cu_2023",
+      "target": "exp_smelt_cu_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_smelt_ni_2022",
+      "target": "topic_smelting",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_smelt_ni_2022",
+      "target": "expert_johansson",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_smelt_ni_2022",
+      "target": "exp_smelt_ni_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_smelt_cu_2021",
+      "target": "topic_smelting",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_smelt_cu_2021",
+      "target": "expert_li",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_smelt_cu_2021",
+      "target": "exp_smelt_cu_02",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_heap_cu_2021",
+      "target": "topic_leaching",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_heap_cu_2021",
+      "target": "expert_baranov",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_heap_cu_2021",
+      "target": "exp_heap_cu_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_deep_inj_ru_2020",
+      "target": "topic_mine_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_deep_inj_ru_2020",
+      "target": "expert_fedorov",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_deep_inj_ru_2020",
+      "target": "exp_deep_inj_ru_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "TAGGED_AS",
+      "source": "pub_deep_inj_de_2019",
+      "target": "topic_mine_water",
+      "key": "TAGGED_AS"
+    },
+    {
+      "type": "AUTHORED_BY",
+      "source": "pub_deep_inj_de_2019",
+      "target": "expert_kowalski",
+      "key": "AUTHORED_BY"
+    },
+    {
+      "type": "DESCRIBES_EXPERIMENT",
+      "source": "pub_deep_inj_de_2019",
+      "target": "exp_deep_inj_de_01",
+      "key": "DESCRIBES_EXPERIMENT"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ro_01",
+      "target": "fac_concentrator_norilsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ro_01",
+      "target": "team_water_lab",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ro_01",
+      "target": "proc_ro",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_ro_01",
+      "target": "eq_ro_unit",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ro_01",
+      "target": "mat_process_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ro_01",
+      "target": "mat_permeate",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Сухой остаток снижен с ~3500 до 450 мг/дм³ при исходных сульфатах/хлоридах/Ca/Mg/Na на уровне 200-260 мг/л",
+      "source": "exp_ro_01",
+      "target": "prop_dry_residue",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ro_01",
+      "target": "concl_ro_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ro_01",
+      "target": "pub_ro_2022",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ix_01",
+      "target": "fac_concentrator_norilsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ix_01",
+      "target": "team_water_lab",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ix_01",
+      "target": "proc_ion_exchange",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ix_01",
+      "target": "mat_process_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ix_01",
+      "target": "mat_permeate",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Сухой остаток снижен до 800 мг/дм³, но требуется частая регенерация смолы",
+      "source": "exp_ix_01",
+      "target": "prop_dry_residue",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ix_01",
+      "target": "concl_ix_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ix_01",
+      "target": "pub_ix_2021",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ed_01",
+      "target": "fac_concentrator_escondida",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ed_01",
+      "target": "team_water_lab",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ed_01",
+      "target": "proc_electrodialysis",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ed_01",
+      "target": "mat_process_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ed_01",
+      "target": "mat_permeate",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Dry residue reduced to 950 mg/dm3 at similar feed composition",
+      "source": "exp_ed_01",
+      "target": "prop_dry_residue",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ed_01",
+      "target": "concl_ed_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ed_01",
+      "target": "pub_ed_2020",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ls_01",
+      "target": "fac_concentrator_norilsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ls_01",
+      "target": "team_water_lab",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ls_01",
+      "target": "proc_lime_soda",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ls_01",
+      "target": "mat_process_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ls_01",
+      "target": "mat_gypsum",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Сухой остаток снижен только до 1500 мг/дм³, требование ≤1000 не достигнуто",
+      "source": "exp_ls_01",
+      "target": "prop_dry_residue",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ls_01",
+      "target": "concl_ls_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ls_01",
+      "target": "pub_ls_2019",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ew_ru_01",
+      "target": "fac_smelter_monchegorsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ew_ru_01",
+      "target": "team_hydromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ew_ru_01",
+      "target": "proc_electrowinning_ni",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_ew_ru_01",
+      "target": "eq_ew_cell_diaphragm",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ew_ru_01",
+      "target": "mat_catholyte",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ew_ru_01",
+      "target": "mat_nickel_cathode",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "При скорости циркуляции 2.5 м³/ч на ячейку достигнута стабильная плотность катода без дендритов",
+      "source": "exp_ew_ru_01",
+      "target": "prop_catholyte_flow",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ew_ru_01",
+      "target": "concl_ew_ru_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ew_ru_01",
+      "target": "pub_ew_ru_2023",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "CONTRADICTS",
+      "note": "Разные конструкции ячеек (диафрагменная/открытая) дают разную рекомендованную скорость циркуляции — требует уточнения применимости.",
+      "source": "concl_ew_ru_01",
+      "target": "concl_ew_intl_01",
+      "key": "CONTRADICTS"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_ew_intl_01",
+      "target": "fac_smelter_sudbury",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_ew_intl_01",
+      "target": "team_hydromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_ew_intl_01",
+      "target": "proc_electrowinning_ni",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_ew_intl_01",
+      "target": "eq_ew_cell_open",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ew_intl_01",
+      "target": "mat_catholyte",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_ew_intl_01",
+      "target": "mat_nickel_cathode",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Flow rate of 4.0 m3/h per cell minimized concentration polarization in open cells",
+      "source": "exp_ew_intl_01",
+      "target": "prop_catholyte_flow",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_ew_intl_01",
+      "target": "concl_ew_intl_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_ew_intl_01",
+      "target": "pub_ew_intl_2022",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_smelt_cu_01",
+      "target": "fac_smelter_monchegorsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_smelt_cu_01",
+      "target": "team_pyromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_smelt_cu_01",
+      "target": "proc_smelting_cu",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_smelt_cu_01",
+      "target": "eq_flash_furnace",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_cu_01",
+      "target": "mat_copper_matte",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_cu_01",
+      "target": "mat_slag",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "97.5% Au, 92% Ag и 85% МПГ перешли в медный штейн при стандартной шихте",
+      "source": "exp_smelt_cu_01",
+      "target": "prop_au_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "97.5% Au, 92% Ag и 85% МПГ перешли в медный штейн при стандартной шихте",
+      "source": "exp_smelt_cu_01",
+      "target": "prop_ag_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "97.5% Au, 92% Ag и 85% МПГ перешли в медный штейн при стандартной шихте",
+      "source": "exp_smelt_cu_01",
+      "target": "prop_pgm_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_smelt_cu_01",
+      "target": "concl_smelt_cu_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_smelt_cu_01",
+      "target": "pub_smelt_cu_2023",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_smelt_ni_01",
+      "target": "fac_smelter_sudbury",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_smelt_ni_01",
+      "target": "team_pyromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_smelt_ni_01",
+      "target": "proc_smelting_ni",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_smelt_ni_01",
+      "target": "eq_flash_furnace",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_ni_01",
+      "target": "mat_nickel_matte",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_ni_01",
+      "target": "mat_slag",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "94% Au and 90% PGM reported to nickel matte in flash smelting",
+      "source": "exp_smelt_ni_01",
+      "target": "prop_au_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "94% Au and 90% PGM reported to nickel matte in flash smelting",
+      "source": "exp_smelt_ni_01",
+      "target": "prop_pgm_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_smelt_ni_01",
+      "target": "concl_smelt_ni_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_smelt_ni_01",
+      "target": "pub_smelt_ni_2022",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_smelt_cu_02",
+      "target": "fac_smelter_monchegorsk",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_smelt_cu_02",
+      "target": "team_pyromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_smelt_cu_02",
+      "target": "proc_smelting_cu",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_smelt_cu_02",
+      "target": "eq_flash_furnace",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_cu_02",
+      "target": "mat_copper_matte",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_smelt_cu_02",
+      "target": "mat_slag",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Снижение содержания серебра в шихте на 15% снизило переход Ag в штейн до 88%",
+      "source": "exp_smelt_cu_02",
+      "target": "prop_ag_distribution",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_smelt_cu_02",
+      "target": "concl_smelt_cu_02",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_smelt_cu_02",
+      "target": "pub_smelt_cu_2021",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_heap_cu_01",
+      "target": "fac_heap_site_ru",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_heap_cu_01",
+      "target": "team_hydromet",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_heap_cu_01",
+      "target": "proc_heap_leaching",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "AT_CONDITION",
+      "source": "exp_heap_cu_01",
+      "target": "cond_temperate",
+      "key": "AT_CONDITION"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_heap_cu_01",
+      "target": "eq_heap_pad",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_heap_cu_01",
+      "target": "mat_copper_ore",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Извлечение меди 78% за 120 суток орошения в умеренном климате",
+      "source": "exp_heap_cu_01",
+      "target": "prop_extraction_rate",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_heap_cu_01",
+      "target": "concl_heap_cu_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_heap_cu_01",
+      "target": "pub_heap_cu_2021",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_deep_inj_ru_01",
+      "target": "fac_mine_kuzbass",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_deep_inj_ru_01",
+      "target": "team_geotech",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_deep_inj_ru_01",
+      "target": "proc_deep_injection",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_deep_inj_ru_01",
+      "target": "eq_deep_well",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_deep_inj_ru_01",
+      "target": "mat_mine_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Закачка 1200 м³/сут на глубину 850 м, капзатраты 4.2 млн $, опекс 0.6 млн $/год",
+      "source": "exp_deep_inj_ru_01",
+      "target": "prop_techno_economic",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_deep_inj_ru_01",
+      "target": "concl_deep_inj_ru_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_deep_inj_ru_01",
+      "target": "pub_deep_inj_ru_2020",
+      "key": "VALIDATED_BY"
+    },
+    {
+      "type": "AT_FACILITY",
+      "source": "exp_deep_inj_de_01",
+      "target": "fac_mine_germany",
+      "key": "AT_FACILITY"
+    },
+    {
+      "type": "CONDUCTED_BY",
+      "source": "exp_deep_inj_de_01",
+      "target": "team_geotech",
+      "key": "CONDUCTED_BY"
+    },
+    {
+      "type": "USES_PROCESS",
+      "source": "exp_deep_inj_de_01",
+      "target": "proc_deep_injection",
+      "key": "USES_PROCESS"
+    },
+    {
+      "type": "ON_EQUIPMENT",
+      "source": "exp_deep_inj_de_01",
+      "target": "eq_deep_well",
+      "key": "ON_EQUIPMENT"
+    },
+    {
+      "type": "USES_MATERIAL",
+      "source": "exp_deep_inj_de_01",
+      "target": "mat_mine_water",
+      "key": "USES_MATERIAL"
+    },
+    {
+      "type": "MEASURES_PROPERTY",
+      "effect": "Injection of 2000 m3/day at 1100 m depth, capex $6.8M, opex $0.9M/year",
+      "source": "exp_deep_inj_de_01",
+      "target": "prop_techno_economic",
+      "key": "MEASURES_PROPERTY"
+    },
+    {
+      "type": "PRODUCES_CONCLUSION",
+      "source": "exp_deep_inj_de_01",
+      "target": "concl_deep_inj_de_01",
+      "key": "PRODUCES_CONCLUSION"
+    },
+    {
+      "type": "VALIDATED_BY",
+      "source": "concl_deep_inj_de_01",
+      "target": "pub_deep_inj_de_2019",
+      "key": "VALIDATED_BY"
+    }
+  ]
+}
