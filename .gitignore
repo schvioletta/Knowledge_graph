@@ -220,3 +220,5 @@ __marimo__/
 data/raw/
 .DS_Store
 .idea/
+
+./data/llm_logs/
