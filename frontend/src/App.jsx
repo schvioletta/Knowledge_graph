@@ -239,7 +239,7 @@ export default function App() {
         {/* Дашборд: фильтры (сворачиваемая панель) | граф | результаты */}
         <div className="mx-auto max-w-[1600px]">
           <div
-            className={`grid h-[640px] w-full transition-[grid-template-columns] duration-200 ${
+            className={`grid h-[640px] w-full ${
               filterOpen ? "lg:grid-cols-[280px_1fr_360px]" : "lg:grid-cols-[44px_1fr_360px]"
             }`}
           >
