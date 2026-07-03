@@ -3,6 +3,7 @@ langchain-community
 langchain-text-splitters
 langchain-openai
 gigachat
+openai
 pydantic>=2
 sentence-transformers
 pypdf
