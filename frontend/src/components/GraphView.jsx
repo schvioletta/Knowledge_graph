@@ -87,6 +87,7 @@ export default function GraphView({
   const linkColor = useCallback(
     (link) => {
       if (link.type === "CONTRADICTS") return "rgba(252,129,129,0.9)";
+      if (link.type === "NEEDS_REVIEW") return "rgba(246,224,94,0.85)";
       if (!hasHighlight) return "rgba(160,174,192,0.35)";
       const s = link.source.id ?? link.source;
       const t = link.target.id ?? link.target;
@@ -96,8 +97,16 @@ export default function GraphView({
     [hasHighlight, highlightNodeIds]
   );
 
-  const linkLineDash = useCallback((link) => (link.type === "CONTRADICTS" ? [4, 3] : null), []);
-  const linkWidth = useCallback((link) => (link.type === "CONTRADICTS" ? 2.5 : 1), []);
+  const linkLineDash = useCallback((link) => {
+    if (link.type === "CONTRADICTS") return [4, 3];
+    if (link.type === "NEEDS_REVIEW") return [1, 3];
+    return null;
+  }, []);
+  const linkWidth = useCallback((link) => {
+    if (link.type === "CONTRADICTS") return 2.5;
+    if (link.type === "NEEDS_REVIEW") return 1.8;
+    return 1;
+  }, []);
 
   return (
     <ForceGraph2D

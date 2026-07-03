@@ -12,6 +12,7 @@ python-dotenv
 fastapi
 uvicorn[standard]
 networkx
+neo4j
 python-docx
 python-pptx
 requests

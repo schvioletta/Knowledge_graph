@@ -210,6 +210,15 @@ function Legend() {
           {label}
         </span>
       ))}
+      <span className="legend-divider" />
+      <span className="legend-item">
+        <span className="legend-line" style={{ borderColor: "rgba(252,129,129,0.9)" }} />
+        противоречие (CONTRADICTS)
+      </span>
+      <span className="legend-item">
+        <span className="legend-line" style={{ borderColor: "rgba(246,224,94,0.85)" }} />
+        похоже на конфликт, требует проверки (NEEDS_REVIEW)
+      </span>
     </div>
   );
 }

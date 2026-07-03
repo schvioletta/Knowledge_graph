@@ -16,6 +16,8 @@ const RELATION_LABEL = {
   VALIDATED_BY: "Подтверждено источником",
   CONTRADICTS: "⚠ Противоречит",
   "incoming::CONTRADICTS": "⚠ Противоречит",
+  NEEDS_REVIEW: "🟡 Похоже на конфликт вывода (требует проверки эксперта)",
+  "incoming::NEEDS_REVIEW": "🟡 Похоже на конфликт вывода (требует проверки эксперта)",
 };
 
 const NUMERIC_LABELS = {
@@ -71,6 +73,21 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
           <ul className="numeric-list">
             {numericEntries.map(([k, v]) => (
               <li key={k}>{NUMERIC_LABELS[k]}: <b>{v}</b></li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {Array.isArray(attrs._history) && attrs._history.length > 0 && (
+        <div className="relation-block">
+          <div className="relation-label">🕘 История изменений факта</div>
+          <ul className="history-list">
+            {attrs._history.map((h, i) => (
+              <li key={i}>
+                {NUMERIC_LABELS[h.attr] || h.attr}: {String(h.old_value)} → <b>{String(h.new_value)}</b>
+                <br />
+                <span className="history-meta">{h.source_file}, {h.changed_at}</span>
+              </li>
             ))}
           </ul>
         </div>

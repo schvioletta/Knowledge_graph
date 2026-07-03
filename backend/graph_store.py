@@ -231,3 +231,24 @@ class GraphStore:
             for u, v, d in sg.edges(data=True)
         ]
         return {"nodes": nodes, "links": links}
+
+    # ---------- бэкенд-независимый интерфейс для FastAPI/ретривера ----------
+    # Эти методы не трогают networkx-специфику наружу (никаких .g.subgraph()/.g.nodes()
+    # в вызывающем коде) — тот же контракт реализует Neo4jGraphStore, так что main.py и
+    # hybrid_retriever.py работают одинаково с обоими бэкендами.
+    def vis_subgraph(self, node_ids) -> dict[str, Any]:
+        return self.to_vis_json(self.g.subgraph(list(node_ids)))
+
+    def neighbors_vis_json(self, node_id: str, depth: int = 1) -> dict[str, Any]:
+        return self.to_vis_json(self.neighbors_subgraph(node_id, depth=depth))
+
+    def dated_nodes(self) -> list[dict[str, Any]]:
+        dated = [
+            {"id": n, "type": d.get("type"), "name": d.get("name"), "date": d["date"]}
+            for n, d in self.g.nodes(data=True) if d.get("date")
+        ]
+        dated.sort(key=lambda x: x["date"])
+        return dated
+
+    def counts(self) -> dict[str, int]:
+        return {"nodes": self.g.number_of_nodes(), "edges": self.g.number_of_edges()}

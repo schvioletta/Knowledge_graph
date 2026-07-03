@@ -5,6 +5,11 @@
   ≥2 независимыми источниками (attrs["sources"] копится при повторных упоминаниях
   той же сущности в разных документах); «низкая» — единичное упоминание без чисел;
   иначе «средняя».
+- версионирование фактов (_apply_attrs_with_history): при повторном упоминании
+  сущности в новом документе с ДРУГИМ значением того же атрибута новое значение
+  теперь обновляет факт (раньше молча отбрасывалось через setdefault — первый
+  источник навсегда «замораживал» значение), а расхождение фиксируется в
+  node["_history"] для аудита.
 - после вставки эксперимента/вывода сразу прогоняется gs.contradictions_for()
   по явным связям CONTRADICTS (если экстрактор их вернул), а также
   полуавтоматическое сравнение нового Conclusion с существующими на той же
@@ -14,7 +19,9 @@
 """
 from __future__ import annotations
 
+import datetime
 import difflib
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +34,46 @@ from backend.schema import Entity, EntityType, Relation, RelationType
 _NUMERIC_HINT_SUFFIXES = (
     "_mg_l", "_pct", "_m3_h", "_a_m2", "_musd", "_m3_day", "_m", "_c", "_h", "_mpa",
 )
+
+# Технические ключи узла, которые не являются «фактами» из документа и не должны
+# версионироваться через _apply_attrs_with_history (у них своя логика обновления).
+_NON_FACT_KEYS = frozenset({"source_file", "sources", "confidence", "date"})
+
+
+def _apply_attrs_with_history(node: dict[str, Any], attrs: dict[str, Any], source_file: str) -> None:
+    """Версионирование фактов: раньше повторное упоминание сущности в новом
+    документе с ДРУГИМ значением того же атрибута молча отбрасывалось
+    (node.setdefault) — первый источник навсегда «замораживал» значение, даже
+    если новый источник его уточнял или опровергал. Теперь новое значение
+    обновляет факт (последний источник считается самым свежим знанием), а
+    расхождение фиксируется в node['_history'] — кто/когда/что изменил,
+    чтобы это можно было показать эксперту, а не потерять."""
+    history = node.get("_history", [])
+    for k, v in attrs.items():
+        if k in _NON_FACT_KEYS:
+            continue
+        existing = node.get(k)
+        if existing is None:
+            node[k] = v
+        elif existing != v:
+            history.append({
+                "attr": k,
+                "old_value": existing,
+                "new_value": v,
+                "source_file": source_file,
+                "changed_at": datetime.date.today().isoformat(),
+            })
+            node[k] = v
+    if history:
+        node["_history"] = history
+
+
+def _stable_id_num(s: str) -> int:
+    """Детерминированная замена встроенному hash(): у Python str-хэш рандомизирован
+    per-process (PYTHONHASHSEED), поэтому id, построенные на hash(), не совпадают
+    между запусками пайплайна — повторный прогон на том же файле/имени сущности
+    получал бы каждый раз новый id и плодил дубли узлов вместо апдейта существующего."""
+    return int(hashlib.sha1(s.encode("utf-8")).hexdigest(), 16)
 
 
 def _has_numeric_evidence(attrs: dict[str, Any]) -> bool:
@@ -52,7 +99,7 @@ class GraphWriter:
         self.stats = {"entities_created": 0, "entities_reused": 0, "relations": 0, "validation_warnings": 0, "needs_review": 0}
 
     def write_document(self, path: str, meta, result_per_chunk: list[ExtractionResult]) -> str:
-        pub_id = f"pub_{Path(path).stem}_{abs(hash(path)) % 10_000:04d}"
+        pub_id = f"pub_{Path(path).stem}_{_stable_id_num(path) % 10_000:04d}"
         title = Path(path).stem.replace("_", " ")
         self.gs.add_entity(Entity(
             id=pub_id, type=EntityType.PUBLICATION, name=title,
@@ -93,13 +140,12 @@ class GraphWriter:
             if source_file not in sources:
                 sources.append(source_file)
             node["sources"] = sources
-            for k, v in attrs.items():
-                node.setdefault(k, v)
+            _apply_attrs_with_history(node, attrs, source_file)
             node["confidence"] = infer_confidence(node, sources)
             self.stats["entities_reused"] += 1
             return existing_id
 
-        real_id = f"{etype}_{abs(hash(name)) % 10_000_000:07d}"
+        real_id = f"{etype}_{_stable_id_num(name) % 10_000_000:07d}"
         full_attrs = dict(attrs)
         full_attrs["source_file"] = source_file
         full_attrs["sources"] = [source_file]

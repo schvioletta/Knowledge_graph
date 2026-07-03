@@ -16,6 +16,12 @@ from backend.schema import EntityType
 # (backend/nlp_pipeline/pipeline.py -> data/real_graph.json), не трогая синтетический демо-датасет.
 DATA_PATH = Path(os.getenv("GRAPH_DATA_PATH") or (Path(__file__).resolve().parent.parent / "data" / "sample_graph.json"))
 
+# GRAPH_BACKEND=neo4j переключает хранилище на Neo4j (Cypher-обход связей вместо
+# самописных Python-запросов поверх NetworkX) — граф должен быть предварительно
+# залит в Neo4j через `python -m backend.neo4j_sync <путь-к-graph.json>` (см. README).
+# По умолчанию — networkx: не требует поднятого Neo4j, подходит для демо офлайн.
+GRAPH_BACKEND = os.getenv("GRAPH_BACKEND", "networkx").lower()
+
 app = FastAPI(title="Materials Knowledge Graph API")
 
 app.add_middleware(
@@ -25,11 +31,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-gs = GraphStore()
+if GRAPH_BACKEND == "neo4j":
+    from backend.graph_store_neo4j import Neo4jGraphStore
+
+    gs = Neo4jGraphStore()
+else:
+    gs = GraphStore()
 
 
 @app.on_event("startup")
 def load_graph() -> None:
+    if GRAPH_BACKEND == "neo4j":
+        counts = gs.counts()
+        if counts["nodes"] == 0:
+            raise RuntimeError(
+                "GRAPH_BACKEND=neo4j, но в Neo4j нет узлов. Сначала залейте граф: "
+                "python -m backend.neo4j_sync data/sample_graph.json (или data/real_graph.json)"
+            )
+        return
+
     if DATA_PATH.exists():
         gs.load(DATA_PATH)
     elif not os.getenv("GRAPH_DATA_PATH"):
@@ -41,6 +61,12 @@ def load_graph() -> None:
             f"GRAPH_DATA_PATH={DATA_PATH} не найден. Сначала постройте граф: "
             f"python -m backend.nlp_pipeline.pipeline data/raw/*.docx data/raw/*.pdf --out {DATA_PATH}"
         )
+
+
+@app.on_event("shutdown")
+def close_graph() -> None:
+    if GRAPH_BACKEND == "neo4j":
+        gs.close()
 
 
 @app.get("/api/graph")
@@ -60,10 +86,9 @@ def get_node(node_id: str):
 
 @app.get("/api/graph/{node_id}/neighbors")
 def get_neighbors(node_id: str, depth: int = Query(1, ge=1, le=3)):
-    if node_id not in gs.g:
+    if gs.node(node_id) is None:
         raise HTTPException(status_code=404, detail="node not found")
-    sub = gs.neighbors_subgraph(node_id, depth=depth)
-    return gs.to_vis_json(sub)
+    return gs.neighbors_vis_json(node_id, depth=depth)
 
 
 @app.get("/api/search")
@@ -78,15 +103,9 @@ def gaps(x: EntityType = EntityType.MATERIAL, y: EntityType = EntityType.CONDITI
 
 @app.get("/api/timeline")
 def timeline():
-    dated = []
-    for n, d in gs.g.nodes(data=True):
-        date = d.get("date")
-        if date:
-            dated.append({"id": n, "type": d.get("type"), "name": d.get("name"), "date": date})
-    dated.sort(key=lambda x: x["date"])
-    return dated
+    return gs.dated_nodes()
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "nodes": gs.g.number_of_nodes(), "edges": gs.g.number_of_edges()}
+    return {"status": "ok", "backend": GRAPH_BACKEND, **gs.counts()}

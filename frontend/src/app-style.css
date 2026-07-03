@@ -209,6 +209,20 @@ html, body, #root {
   display: inline-block;
 }
 
+.legend-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #1a2130;
+}
+
+.legend-line {
+  width: 16px;
+  height: 0;
+  border-bottom-width: 2px;
+  border-bottom-style: dashed;
+  display: inline-block;
+}
+
 .detail-panel {
   width: 320px;
   border-left: 1px solid #1a2130;
@@ -304,6 +318,23 @@ html, body, #root {
 
 .meta.effect {
   color: #f6ad55;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+}
+
+.history-list li {
+  padding: 4px 0;
+  border-bottom: 1px dashed #1a2130;
+}
+
+.history-meta {
+  color: #64748b;
+  font-size: 10px;
 }
 
 .relation-block {

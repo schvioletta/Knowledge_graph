@@ -26,6 +26,12 @@ contradictions/needs-review) -> save.
 Publication — это явно логируется, чтобы не создавать иллюзию работы там, где
 реального извлечения не произошло (см. README, раздел про сетевые ограничения
 песочницы при разработке).
+
+Повторные запуски не жгут LLM впустую: файлы, уже отмеченные в манифесте
+(data/processed_manifest.json по умолчанию, см. nlp_pipeline/manifest.py) с тем
+же sha256 содержимого, пропускаются автоматически. Изменённый файл (другой
+sha256) считается новым и переобрабатывается; --force переобрабатывает всё
+независимо от манифеста.
 """
 from __future__ import annotations
 
@@ -40,12 +46,14 @@ from backend.llm_client import is_configured
 from backend.nlp_pipeline.chunking import chunk_blocks
 from backend.nlp_pipeline.graph_writer import GraphWriter
 from backend.nlp_pipeline.ingest import load_document
+from backend.nlp_pipeline.manifest import ProcessedManifest
 from backend.nlp_pipeline.ner_extract import extract_chunk_entities
 from backend.nlp_pipeline.resolve import AliasTable
 from backend.nlp_pipeline.sampling import select_files
 from backend.nlp_pipeline.sections import extract_key_sections
 
 DEFAULT_ALIAS_TABLE = "data/alias_table.json"
+DEFAULT_MANIFEST = "data/processed_manifest.json"
 DEFAULT_CHUNK_MAX_CHARS = 2200
 DEFAULT_SECTION_MAX_CHARS = 6000
 
@@ -118,6 +126,11 @@ def main() -> None:
     parser.add_argument("--out", default="data/real_graph.json", help="Куда сохранить результирующий граф")
     parser.add_argument("--base", default=None, help="Существующий граф для дополнения (JSON)")
     parser.add_argument("--alias-table", default=DEFAULT_ALIAS_TABLE, help="Путь к персистентной таблице алиасов")
+    parser.add_argument("--manifest", default=DEFAULT_MANIFEST,
+                         help="Путь к манифесту обработанных файлов (по sha256 содержимого) — "
+                              "файлы, уже обработанные без изменений, пропускаются без LLM-вызовов")
+    parser.add_argument("--force", action="store_true",
+                         help="Игнорировать манифест и переобработать все файлы, даже уже отмеченные")
 
     parser.add_argument("--per-category", type=int, default=None,
                          help="Взять не более N файлов из каждой категории (по подпапке в --raw-root, "
@@ -162,6 +175,22 @@ def main() -> None:
         else:
             _log(f"отбор не применяется, файлов на вход: {len(files_to_process)}", indent=1)
 
+    manifest = ProcessedManifest(args.manifest)
+    if args.force:
+        _log("манифест: --force задан, повторно обрабатываю все файлы независимо от манифеста", indent=1)
+    else:
+        before = len(files_to_process)
+        already_done = [f for f in files_to_process if manifest.is_processed(f)]
+        if already_done:
+            already_done_set = set(already_done)
+            files_to_process = [f for f in files_to_process if f not in already_done_set]
+            _log(
+                f"манифест ({args.manifest}): пропущено {len(already_done)}/{before} файл(ов), уже "
+                f"обработанных без изменений содержимого — LLM-вызовы на них не тратятся "
+                f"(--force для принудительного повтора)",
+                indent=1,
+            )
+
     if args.limit is not None and len(files_to_process) > args.limit:
         _log(f"смоук-режим: ограничиваю {len(files_to_process)} файл(ов) до первых {args.limit}", indent=1)
         files_to_process = files_to_process[:args.limit]
@@ -191,6 +220,7 @@ def main() -> None:
         _log(f"--- файл {idx}/{len(files_to_process)}: {f} ---")
         info = process_file(writer, f, sections_only, args.chunk_max_chars, args.section_max_chars)
         total_chunks += info["chunks"]
+        manifest.mark_processed(f)
         _log(f"файл обработан за {time.time() - file_t0:.1f}с ({info['chunks']} чанков)", indent=1)
 
     _log("=== Итог ===")
@@ -208,6 +238,7 @@ def main() -> None:
     )
 
     alias_table.save()
+    manifest.save()
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     gs.save(out_path)

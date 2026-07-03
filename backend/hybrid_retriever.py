@@ -230,12 +230,11 @@ def hybrid_search(gs: GraphStore, question: str) -> dict[str, Any]:
     answer = "\n".join(lines)
     answer = _maybe_llm_polish(question, answer)
 
-    subgraph = gs.g.subgraph(path_nodes)
     return {
         "answer": answer,
         "matched_experiment_ids": [e["id"] for e in experiments],
         "path_node_ids": list(path_nodes),
-        "subgraph": gs.to_vis_json(subgraph),
+        "subgraph": gs.vis_subgraph(path_nodes),
         "gaps_mentioned": gaps_mentioned,
         "contradictions": contradictions,
         "detected_entities": {
