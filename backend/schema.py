@@ -43,6 +43,7 @@ class RelationType(str, Enum):
     MEMBER_OF = "MEMBER_OF"
     CONTRADICTS = "CONTRADICTS"
     VALIDATED_BY = "VALIDATED_BY"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
 
 
 class Entity(BaseModel):

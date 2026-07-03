@@ -1,6 +1,7 @@
 """FastAPI-бэкенд knowledge graph поисково-аналитической системы."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -11,7 +12,9 @@ from backend.hybrid_retriever import hybrid_search
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "sample_graph.json"
+# GRAPH_DATA_PATH переключает бэкенд на граф, построенный из реальных документов
+# (backend/nlp_pipeline/pipeline.py -> data/real_graph.json), не трогая синтетический демо-датасет.
+DATA_PATH = Path(os.getenv("GRAPH_DATA_PATH") or (Path(__file__).resolve().parent.parent / "data" / "sample_graph.json"))
 
 app = FastAPI(title="Materials Knowledge Graph API")
 
@@ -29,10 +32,15 @@ gs = GraphStore()
 def load_graph() -> None:
     if DATA_PATH.exists():
         gs.load(DATA_PATH)
-    else:
+    elif not os.getenv("GRAPH_DATA_PATH"):
         gs2 = build_sample_graph()
         gs2.save(DATA_PATH)
         gs.load(DATA_PATH)
+    else:
+        raise FileNotFoundError(
+            f"GRAPH_DATA_PATH={DATA_PATH} не найден. Сначала постройте граф: "
+            f"python -m backend.nlp_pipeline.pipeline data/raw/*.docx data/raw/*.pdf --out {DATA_PATH}"
+        )
 
 
 @app.get("/api/graph")

@@ -15,35 +15,9 @@ from datetime import date, timedelta
 from typing import Any, Optional
 
 from backend.graph_store import GraphStore
+from backend.lexicon import best_match, best_matches, expand_synonyms
+from backend.llm_client import complete as llm_complete
 from backend.schema import EntityType
-
-_STOPWORDS = {
-    "что", "уже", "делали", "по", "при", "какой", "был", "какая", "какие", "как", "и",
-    "с", "в", "во", "для", "а", "если", "на", "или", "за", "все", "the", "what", "was",
-    "did", "for", "are", "is",
-}
-
-# Синонимы RU/EN и профессиональный жаргон -> канонический фрагмент имени сущности в графе.
-SYNONYMS = {
-    "electrowinning": "электроэкстракция",
-    "electrowinning of nickel": "электроэкстракция никеля",
-    "catholyte": "католит",
-    "catholyte circulation": "циркуляции католита",
-    "flash smelting": "взвешенной плавки",
-    "fluidized bed furnace": "печь взвешенной плавки",
-    "пвп": "печь взвешенной плавки",
-    "heap leaching": "кучное выщелачивание",
-    "deep well injection": "закачка в глубокие горизонты",
-    "deep injection": "закачка в глубокие горизонты",
-    "matte": "штейн",
-    "slag": "шлак",
-    "pgm": "мпг",
-    "reverse osmosis": "обратный осмос",
-    "ion exchange": "ионный обмен",
-    "electrodialysis": "электродиализ",
-    "dry residue": "сухой остаток",
-    "desalination": "обессоливани",
-}
 
 # Термины -> ключ числового атрибута на узле Experiment.
 ATTR_TERMS: list[tuple[str, str]] = [
@@ -74,72 +48,15 @@ _GE_RE = re.compile(rf"(?:≥|>=|не\s+менее|минимум|от)\s*({_NUM
 _PLAIN_NUM_RE = re.compile(rf"({_NUM})")
 
 
-def _expand_synonyms(text: str) -> str:
-    low = text.lower()
-    extra = []
-    for alias, canonical in SYNONYMS.items():
-        if alias in low:
-            extra.append(canonical)
-    if extra:
-        return text + " " + " ".join(extra)
-    return text
-
-
-def _extract_candidates(text: str) -> list[str]:
-    words = re.findall(r"[\wА-Яа-яЁё\-]+", text)
-    return [w for w in words if w.lower() not in _STOPWORDS and len(w) > 1]
-
-
-def _word_match(a: str, b: str) -> bool:
-    """Грубое сопоставление словоформ рус. языка без полноценного стемминга:
-    точное совпадение либо достаточно длинный общий префикс относительно длины
-    слова (покрывает падежные/родовые окончания: руда/руды, никелевая/никелевой,
-    электроэкстракция/электроэкстракции)."""
-    if a == b:
-        return True
-    if len(a) < 4 or len(b) < 4:
-        return False
-    lcp = 0
-    for x, y in zip(a, b):
-        if x != y:
-            break
-        lcp += 1
-    threshold = max(3, int(0.6 * min(len(a), len(b))))
-    return lcp >= threshold
-
-
 def _match_entities(gs: GraphStore, text: str, etype: EntityType) -> list[dict[str, Any]]:
     """Возвращает все сущности заданного типа, достаточно хорошо совпавшие с текстом
     (не только единственную лучшую) — это нужно, чтобы вопросы вида «медным/никелевым
     штейном» матчились на ОБА варианта, а не теряли один из них."""
-    candidates = gs.entities_by_type(etype)
-    low = text.lower()
-    tokens = [t.lower() for t in _extract_candidates(text)]
-    scored: list[tuple[float, dict[str, Any]]] = []
-    for c in candidates:
-        name = str(c["name"]).lower()
-        if name in low:
-            score = 100.0 + len(name)
-        else:
-            name_words = [w for w in re.findall(r"[\wа-яёa-z\-]+", name) if len(w) > 2]
-            if not name_words:
-                continue
-            overlap = sum(1 for w in name_words if any(_word_match(w, t) for t in tokens))
-            ratio = overlap / len(name_words)
-            if overlap == 0 or ratio < 0.5:
-                continue
-            score = overlap * 10 + ratio * 5
-        scored.append((score, c))
-    if not scored:
-        return []
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_score = scored[0][0]
-    return [c for score, c in scored if score >= 0.7 * top_score][:3]
+    return best_matches(gs.entities_by_type(etype), text)
 
 
 def _match_entity(gs: GraphStore, text: str, etype: EntityType) -> Optional[dict[str, Any]]:
-    matches = _match_entities(gs, text, etype)
-    return matches[0] if matches else None
+    return best_match(gs.entities_by_type(etype), text)
 
 
 def _detect_country(text: str) -> Optional[str]:
@@ -213,7 +130,7 @@ def _extract_numeric_filters(text: str) -> list[tuple[str, str, float]]:
 
 
 def hybrid_search(gs: GraphStore, question: str) -> dict[str, Any]:
-    text = _expand_synonyms(question)
+    text = expand_synonyms(question)
 
     materials = _match_entities(gs, text, EntityType.MATERIAL)
     processes = _match_entities(gs, text, EntityType.PROCESS)
@@ -331,21 +248,14 @@ def hybrid_search(gs: GraphStore, question: str) -> dict[str, Any]:
 
 
 def _maybe_llm_polish(question: str, draft_answer: str) -> str:
-    api_key = os.getenv("GIGACHAT_API_KEY")
-    if not api_key or not draft_answer:
+    if not draft_answer:
         return draft_answer
-    try:
-        from langchain_community.chat_models.gigachat import GigaChat
-
-        llm = GigaChat(credentials=api_key, verify_ssl_certs=False, temperature=0)
-        prompt = (
-            "Ты помощник-исследователь в горно-металлургической отрасли. Ниже вопрос и сырые данные "
-            "из графа знаний (эксперименты, источники, выводы, возможные противоречия). Перепиши данные "
-            "в связный, структурированный ответ на русском, ничего не выдумывая и не теряя фактов: "
-            "материалы, процессы, числовые эффекты, источники, уровень достоверности, противоречия.\n\n"
-            f"ВОПРОС: {question}\n\nДАННЫЕ:\n{draft_answer}\n\nОТВЕТ:"
-        )
-        result = llm.invoke(prompt)
-        return getattr(result, "content", None) or draft_answer
-    except Exception:
-        return draft_answer
+    prompt = (
+        "Ты помощник-исследователь в горно-металлургической отрасли. Ниже вопрос и сырые данные "
+        "из графа знаний (эксперименты, источники, выводы, возможные противоречия). Перепиши данные "
+        "в связный, структурированный ответ на русском, ничего не выдумывая и не теряя фактов: "
+        "материалы, процессы, числовые эффекты, источники, уровень достоверности, противоречия.\n\n"
+        f"ВОПРОС: {question}\n\nДАННЫЕ:\n{draft_answer}\n\nОТВЕТ:"
+    )
+    polished = llm_complete(prompt)
+    return polished or draft_answer

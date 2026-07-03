@@ -3,7 +3,7 @@ langchain-community
 langchain-text-splitters
 langchain-openai
 gigachat
-pydantic<2
+pydantic>=2
 sentence-transformers
 pypdf
 qdrant-client
@@ -11,3 +11,9 @@ python-dotenv
 fastapi
 uvicorn[standard]
 networkx
+python-docx
+python-pptx
+requests
+pymupdf
+pytesseract
+langdetect
