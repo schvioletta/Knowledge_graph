@@ -218,8 +218,5 @@ __marimo__/
 .streamlit/secrets.toml
 
 data/raw/
-# Загруженные пользователем документы/ссылки для RAG-чата (backend/rag/) —
-# как и data/raw/, может содержать произвольный/чужой контент, в репозиторий не идёт.
-data/rag/
 .DS_Store
 .idea/

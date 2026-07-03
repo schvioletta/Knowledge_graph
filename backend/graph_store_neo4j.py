@@ -38,6 +38,14 @@ _VALID_RELATION_TYPES = {t.value for t in RelationType}
 # поэтому такие поля сериализуются в JSON-строку при записи и парсятся обратно при чтении.
 _JSON_ENCODED_ATTRS = ("_history",)
 
+# rag_chunks — JSON-блоб с текстом чанков И их эмбеддингами (backend/rag/store.py,
+# Neo4jDocumentStore) на узлах Publication, загруженных через RAG-чат. Может быть
+# десятками КБ на документ (384 float на чанк) — незачем гонять это в каждом
+# ответе /api/graph и /api/graph/{id}, где нужны только name/type/обычные атрибуты.
+# Сам RAG-стор читает/пишет это поле напрямую через свои Cypher-запросы, минуя
+# _node_dict.
+_HIDDEN_FROM_VIS = {"rag_chunks"}
+
 ENTITY_RELATION: dict[EntityType, str] = {
     EntityType.MATERIAL: "USES_MATERIAL",
     EntityType.PROCESS: "USES_PROCESS",
@@ -86,6 +94,8 @@ class Neo4jGraphStore:
     def _node_dict(n) -> dict[str, Any]:
         d = _decode_attrs(dict(n))
         node_id = d.pop("id")
+        for k in _HIDDEN_FROM_VIS:
+            d.pop(k, None)
         return {"id": node_id, **d}
 
     # ---------- загрузка из NetworkX-графа, построенного пайплайном ----------
@@ -113,7 +123,11 @@ class Neo4jGraphStore:
             })
 
         with self.driver.session() as s:
-            s.run("MATCH (n:Entity) DETACH DELETE n")
+            # rag_chunks IS NULL — не трогаем узлы документов, загруженных через
+            # RAG-чат (backend/rag/store.py): это отдельная, управляемая
+            # пользователем коллекция, а не часть NLP-пайплайна, и пересборка
+            # демо/боевого графа не должна её стирать.
+            s.run("MATCH (n:Entity) WHERE n.rag_chunks IS NULL DETACH DELETE n")
             s.run(
                 """
                 UNWIND $nodes AS row

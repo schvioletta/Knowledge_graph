@@ -1,6 +1,6 @@
 """Grounded RAG-ответ: только по фрагментам загруженных документов/ссылок.
 
-Отказ вместо выдумки — если DocumentStore.search() не находит ничего выше
+Отказ вместо выдумки — если Neo4jDocumentStore.search() не находит ничего выше
 порога релевантности, отвечаем прямым текстом "не нашлось", а не отправляем
 пустой контекст в LLM (иначе модель почти наверняка ответит из общих знаний,
 что и является тем самым "неподтверждённым ответом", которого просили
@@ -15,7 +15,7 @@ from typing import Any
 from backend.llm_client import complete as llm_complete
 from backend.llm_client import get_last_error as llm_last_error
 from backend.llm_client import is_configured as llm_configured
-from backend.rag.store import DocumentStore
+from backend.rag.store import Neo4jDocumentStore
 
 _NOT_FOUND_ANSWER = (
     "В загруженных документах и ссылках не нашлось информации по этому вопросу. "
@@ -41,7 +41,7 @@ _SYSTEM_PROMPT = """Ты — ассистент, отвечающий СТРОГ
 ОТВЕТ (каждый факт и число — со ссылкой [N]):"""
 
 
-def answer_question(store: DocumentStore, question: str, top_k: int = 6) -> dict[str, Any]:
+def answer_question(store: Neo4jDocumentStore, question: str, top_k: int = 6) -> dict[str, Any]:
     hits = store.search(question, top_k=top_k)
 
     if not hits:

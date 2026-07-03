@@ -22,7 +22,7 @@ from backend.hybrid_retriever import hybrid_search
 from backend.nlp_pipeline.ingest import LOADERS, load_document
 from backend.rag.ingest_link import fetch_url_blocks
 from backend.rag.qa import answer_question
-from backend.rag.store import DocumentStore
+from backend.rag.store import Neo4jDocumentStore
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
 
@@ -55,11 +55,27 @@ if GRAPH_BACKEND == "neo4j":
 else:
     gs = GraphStore()
 
-# RAG-хранилище загруженных файлов/ссылок (независимо от графа знаний — см.
-# backend/rag/store.py). Модель эмбеддингов грузится лениво при первой
-# загрузке документа/вопросе, поэтому старт бэкенда не замедляется, если
-# RAG не используется.
-rag_store = DocumentStore()
+# RAG-хранилище загруженных файлов/ссылок (backend/rag/store.py) — теперь
+# всегда в Neo4j, независимо от GRAPH_BACKEND для основного графа: так
+# загруженные через чат документы становятся обычными узлами графа и видны
+# в общей визуализации (/api/graph), а не только в панели источников чата.
+# Модель эмбеддингов грузится лениво при первой загрузке документа/вопросе,
+# поэтому старт бэкенда не замедляется, если RAG не используется.
+rag_store = Neo4jDocumentStore()
+
+
+@app.on_event("startup")
+def check_rag_store() -> None:
+    # RAG-хранилище всегда в Neo4j (см. rag_store = Neo4jDocumentStore() выше),
+    # независимо от GRAPH_BACKEND для основного графа — падаем сразу и понятно,
+    # а не на первой попытке загрузить файл через чат.
+    try:
+        rag_store.driver.verify_connectivity()
+    except Exception as e:
+        raise RuntimeError(
+            f"RAG-чат требует Neo4j, а подключиться не удалось ({e}). "
+            "Поднимите его: docker compose up -d neo4j (см. README)."
+        ) from e
 
 
 @app.on_event("startup")
@@ -90,6 +106,7 @@ def load_graph() -> None:
 def close_graph() -> None:
     if GRAPH_BACKEND == "neo4j":
         gs.close()
+    rag_store.close()
 
 
 @app.get("/api/graph")
