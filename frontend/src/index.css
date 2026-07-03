@@ -1,7 +1,96 @@
+@import "tailwindcss";
+
+/* Строгая дизайн-система: только эти 5 цветов и их производные (alpha-варианты). */
 :root {
-  color-scheme: dark;
+  --asw-blue: #0077c8;
+  --asw-blue-10: #0077c8;
+  --asw-blue-20: #0077c8;
+
+  --aws-secondary-600: #016cb6;
+
+  --aws-gray-200: #ebedf1;
+  --aws-gray-60: #1a1b25;
+
+  --aws-navy-blue: #004c97;
+}
+
+@theme {
+  --color-primary: var(--asw-blue);
+  --color-secondary: var(--aws-secondary-600);
+  --color-navy: var(--aws-navy-blue);
+  --color-surface: var(--aws-gray-200);
+  --color-ink: var(--aws-gray-60);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
+  background: var(--aws-gray-200);
+  color: var(--aws-gray-60);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--asw-blue) 25%, transparent);
+  color: var(--aws-gray-60);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--aws-gray-200);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--aws-gray-60) 25%, transparent);
+  border-radius: 999px;
+  border: 2px solid var(--aws-gray-200);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--aws-gray-60) 40%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--asw-blue);
+  outline-offset: 2px;
+}
+
+/* Единственная допустимая анимация связей графа — лёгкая пульсация прозрачности,
+   без свечения и без "бегущих" частиц. */
+@keyframes edge-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-edge-pulse {
+  animation: edge-pulse 3.5s ease-in-out infinite;
+}
+
+.animate-flow-dash {
+  stroke-dasharray: 6 10;
+  animation: flow-dash 1.4s linear infinite;
 }

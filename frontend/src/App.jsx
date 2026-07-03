@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import GraphView from "./components/GraphView";
 import SearchBar from "./components/SearchBar";
 import DetailPanel from "./components/DetailPanel";
-import GapToggle from "./components/GapToggle";
-import TimelineSlider from "./components/TimelineSlider";
+import FilterDock from "./components/FilterDock";
+import NavBar from "./components/NavBar";
+import Footer from "./components/Footer";
+import Card from "./components/ui/Card";
+import ProblemCards from "./sections/ProblemCards";
+import Pipeline from "./sections/Pipeline";
+import Capabilities from "./sections/Capabilities";
+import Coverage from "./sections/Coverage";
+import ExampleQueries from "./sections/ExampleQueries";
+import RequirementsStatus from "./sections/RequirementsStatus";
+import Architecture from "./sections/Architecture";
 import { api } from "./api";
-import { TYPE_COLOR, TYPE_LABEL } from "./constants";
-import "./app-style.css";
+import { FILTERABLE_TYPES } from "./constants";
 
 function mergeVis(nodesMap, links, vis) {
   const newNodesMap = { ...nodesMap };
@@ -45,6 +54,8 @@ export default function App() {
   const [timelineEnabled, setTimelineEnabled] = useState(false);
   const [timelineDates, setTimelineDates] = useState([]);
   const [cursor, setCursor] = useState(0);
+
+  const [typeFilter, setTypeFilter] = useState(() => new Set(FILTERABLE_TYPES));
 
   useEffect(() => {
     api.fullGraph().then((vis) => {
@@ -107,8 +118,20 @@ export default function App() {
       });
     }
 
+    if (typeFilter.size < FILTERABLE_TYPES.length) {
+      const visibleIds = new Set(
+        allNodes.filter((n) => n.type === "ghost" || typeFilter.has(n.type)).map((n) => n.id)
+      );
+      allNodes = allNodes.filter((n) => visibleIds.has(n.id));
+      allLinks = allLinks.filter((l) => {
+        const s = l.source.id ?? l.source;
+        const t = l.target.id ?? l.target;
+        return visibleIds.has(s) && visibleIds.has(t);
+      });
+    }
+
     return { nodes: allNodes, links: allLinks.map((l) => ({ ...l })) };
-  }, [nodesMap, links, gapEnabled, gapNodes, gapLinks, timelineEnabled, timelineDates, cursor]);
+  }, [nodesMap, links, gapEnabled, gapNodes, gapLinks, timelineEnabled, timelineDates, cursor, typeFilter]);
 
   const handleNodeClick = async (node) => {
     setSelectedNode(node);
@@ -145,80 +168,172 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>R&D Knowledge Graph · Горно-металлургическая отрасль</h1>
-        <p>Публикации, эксперименты, материалы, процессы, условия, оборудование, предприятия и команды — в одном графе</p>
-      </header>
+  const handleExampleSelect = (question) => {
+    document.getElementById("workbench")?.scrollIntoView({ behavior: "smooth" });
+    handleSearch(question);
+  };
 
-      <div className="app-body">
-        <div className="graph-area">
-          <SearchBar onSearch={handleSearch} loading={searchLoading} />
-          {answer && (
-            <div className="answer-box">
-              <div className="answer-title">Ответ по графу</div>
-              <pre>{answer}</pre>
-              <button onClick={() => { setAnswer(""); setHighlightIds(new Set()); }}>Сбросить подсветку</button>
-            </div>
-          )}
-          <div className="controls-row">
-            <GapToggle
-              enabled={gapEnabled}
-              onToggle={(v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } }}
-              xAxis={gapX}
-              yAxis={gapY}
-              onAxisChange={(x, y) => { setGapX(x); setGapY(y); }}
-              gapCount={gapNodes.length}
-            />
-            <TimelineSlider
-              enabled={timelineEnabled}
-              onToggle={(v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } }}
-              dates={timelineDates}
-              cursor={cursor}
-              onCursorChange={setCursor}
-            />
+  const toggleType = (type) => {
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const resetTypes = () => setTypeFilter(new Set(FILTERABLE_TYPES));
+
+  return (
+    <div id="top" className="min-h-screen bg-surface text-ink">
+      <NavBar />
+
+      <section id="workbench" className="border-b border-ink/10">
+        {/* Masthead — структурный навигационный блок, не декоративный hero */}
+        <div className="bg-navy">
+          <div className="mx-auto max-w-[1600px] px-6 py-12 md:py-16">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-surface/70">
+                Knowledge Graph · R&D
+              </span>
+              <h1 className="mt-3 max-w-2xl text-3xl font-bold leading-[1.15] text-surface md:text-4xl lg:text-5xl">
+                Knowledge Graph для R&D горно-металлургической отрасли
+              </h1>
+              <p className="mt-3 max-w-xl text-sm text-surface/70 md:text-base">
+                Единая интеллектуальная карта исследований, экспериментов, публикаций,
+                технологий и экспертов.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a
+                  href="#search-toolbar"
+                  className="rounded bg-primary px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-secondary"
+                >
+                  Попробовать поиск
+                </a>
+                <a
+                  href="#examples"
+                  className="rounded border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:border-surface/60"
+                >
+                  Посмотреть демо
+                </a>
+              </div>
+            </motion.div>
           </div>
-          <div className="graph-canvas-wrap">
-            <GraphView
-              graphData={graphData}
-              highlightNodeIds={highlightIds}
-              onNodeClick={handleNodeClick}
-              selectedNodeId={selectedNode?.id}
-              fitSignal={fitSignal}
-            />
-          </div>
-          <Legend />
         </div>
-        <DetailPanel
-          node={selectedNode}
-          detail={detail}
-          onExpand={handleExpand}
-          onClose={() => { setSelectedNode(null); setDetail(null); }}
-        />
-      </div>
-    </div>
-  );
-}
 
-function Legend() {
-  return (
-    <div className="legend">
-      {Object.entries(TYPE_LABEL).map(([type, label]) => (
-        <span key={type} className="legend-item">
-          <span className="legend-dot" style={{ background: TYPE_COLOR[type] }} />
-          {label}
-        </span>
-      ))}
-      <span className="legend-divider" />
-      <span className="legend-item">
-        <span className="legend-line" style={{ borderColor: "rgba(252,129,129,0.9)" }} />
-        противоречие (CONTRADICTS)
-      </span>
-      <span className="legend-item">
-        <span className="legend-line" style={{ borderColor: "rgba(246,224,94,0.85)" }} />
-        похоже на конфликт, требует проверки (NEEDS_REVIEW)
-      </span>
+        {/* Toolbar поиска */}
+        <div id="search-toolbar" className="border-b border-ink/10 bg-surface px-6 py-4">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
+            {answer && (
+              <Card className="p-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">
+                  Ответ по графу
+                </div>
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
+                  {answer}
+                </pre>
+                <button
+                  onClick={() => { setAnswer(""); setHighlightIds(new Set()); }}
+                  className="mt-2 rounded border border-ink/20 px-2.5 py-1 text-xs text-ink/60 transition hover:text-ink"
+                >
+                  Сбросить подсветку
+                </button>
+              </Card>
+            )}
+            <SearchBar onSearch={handleSearch} loading={searchLoading} />
+          </div>
+        </div>
+
+        {/* Дашборд: фильтры | граф | детали */}
+        <div className="mx-auto max-w-[1600px]">
+          <div className="grid h-[640px] w-full lg:grid-cols-[280px_1fr_320px]">
+            <div className="hidden border-r border-ink/10 lg:block">
+              <FilterDock
+                typeFilter={typeFilter}
+                onToggleType={toggleType}
+                onResetTypes={resetTypes}
+                gapProps={{
+                  enabled: gapEnabled,
+                  onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                  xAxis: gapX,
+                  yAxis: gapY,
+                  onAxisChange: (x, y) => { setGapX(x); setGapY(y); },
+                  gapCount: gapNodes.length,
+                }}
+                timelineProps={{
+                  enabled: timelineEnabled,
+                  onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                  dates: timelineDates,
+                  cursor,
+                  onCursorChange: setCursor,
+                }}
+              />
+            </div>
+
+            <div className="min-h-[420px] min-w-0 overflow-hidden border-ink/10 lg:border-r">
+              <GraphView
+                graphData={graphData}
+                highlightNodeIds={highlightIds}
+                onNodeClick={handleNodeClick}
+                selectedNodeId={selectedNode?.id}
+                fitSignal={fitSignal}
+              />
+            </div>
+
+            <div className="hidden border-l border-ink/10 lg:block">
+              <DetailPanel
+                node={selectedNode}
+                detail={detail}
+                onExpand={handleExpand}
+                onClose={() => { setSelectedNode(null); setDetail(null); }}
+              />
+            </div>
+          </div>
+
+          {/* Стековая раскладка для узких экранов: фильтры и детали графа под канвасом */}
+          <div className="flex flex-col gap-4 border-t border-ink/10 p-4 lg:hidden">
+            <FilterDock
+              typeFilter={typeFilter}
+              onToggleType={toggleType}
+              onResetTypes={resetTypes}
+              gapProps={{
+                enabled: gapEnabled,
+                onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                xAxis: gapX,
+                yAxis: gapY,
+                onAxisChange: (x, y) => { setGapX(x); setGapY(y); },
+                gapCount: gapNodes.length,
+              }}
+              timelineProps={{
+                enabled: timelineEnabled,
+                onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                dates: timelineDates,
+                cursor,
+                onCursorChange: setCursor,
+              }}
+            />
+            <DetailPanel
+              node={selectedNode}
+              detail={detail}
+              onExpand={handleExpand}
+              onClose={() => { setSelectedNode(null); setDetail(null); }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <ProblemCards />
+      <Pipeline />
+      <Capabilities />
+      <Coverage nodesMap={nodesMap} />
+      <ExampleQueries onSelect={handleExampleSelect} />
+      <RequirementsStatus />
+      <Architecture />
+      <Footer />
     </div>
   );
 }
