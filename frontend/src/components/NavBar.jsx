@@ -1,4 +1,4 @@
-import { Share2, GitBranch } from "lucide-react";
+import { Share2 } from "lucide-react";
 
 const LINKS = [
   { href: "#workbench", label: "Граф" },
@@ -31,16 +31,6 @@ export default function NavBar() {
             </a>
           ))}
         </nav>
-
-        <a
-          href="https://github.com"
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-2 rounded border border-ink/30 px-3 py-1.5 text-sm text-ink/80 transition hover:border-ink/60 hover:text-ink"
-        >
-          <GitBranch size={15} />
-          GitHub
-        </a>
       </div>
     </header>
   );

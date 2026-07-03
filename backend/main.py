@@ -2,15 +2,25 @@
 from __future__ import annotations
 
 import os
+import uuid
+from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from backend.graph_store import GraphStore
 from backend.hybrid_retriever import hybrid_search
+from backend.nlp_pipeline.ingest import LOADERS, load_document
+from backend.rag.ingest_link import fetch_url_blocks
+from backend.rag.qa import answer_question
+from backend.rag.store import DocumentStore
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
+
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # GRAPH_DATA_PATH переключает бэкенд на граф, построенный из реальных документов
 # (backend/nlp_pipeline/pipeline.py -> data/real_graph.json), не трогая синтетический демо-датасет.
@@ -37,6 +47,12 @@ if GRAPH_BACKEND == "neo4j":
     gs = Neo4jGraphStore()
 else:
     gs = GraphStore()
+
+# RAG-хранилище загруженных файлов/ссылок (независимо от графа знаний — см.
+# backend/rag/store.py). Модель эмбеддингов грузится лениво при первой
+# загрузке документа/вопросе, поэтому старт бэкенда не замедляется, если
+# RAG не используется.
+rag_store = DocumentStore()
 
 
 @app.on_event("startup")
@@ -109,3 +125,55 @@ def timeline():
 @app.get("/api/health")
 def health():
     return {"status": "ok", "backend": GRAPH_BACKEND, **gs.counts()}
+
+
+# ---------- RAG: загрузка документов/ссылок и чат по ним ----------
+
+class LinkRequest(BaseModel):
+    url: str
+
+
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in LOADERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Неподдерживаемый формат {ext!r}. Поддерживаются: {', '.join(sorted(LOADERS))}",
+        )
+
+    dest = UPLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{file.filename}"
+    dest.write_bytes(await file.read())
+
+    try:
+        blocks, _meta = load_document(dest)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Не удалось прочитать файл: {e}") from e
+
+    doc = rag_store.add_document(title=file.filename, source_type="file", source_name=file.filename, blocks=blocks)
+    return asdict(doc)
+
+
+@app.post("/api/documents/link")
+def add_link(payload: LinkRequest):
+    url = payload.url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="url обязателен")
+
+    try:
+        blocks, title = fetch_url_blocks(url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Не удалось загрузить ссылку: {e}") from e
+
+    doc = rag_store.add_document(title=title, source_type="link", source_name=url, blocks=blocks)
+    return asdict(doc)
+
+
+@app.get("/api/documents")
+def list_documents():
+    return [asdict(d) for d in rag_store.list_documents()]
+
+
+@app.get("/api/rag/ask")
+def rag_ask(q: str = Query(..., min_length=1)):
+    return answer_question(rag_store, q)

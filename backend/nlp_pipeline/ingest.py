@@ -8,6 +8,7 @@ source/date в модели верификации фактов (schema.py: Enti
 from __future__ import annotations
 
 import datetime
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -122,7 +123,17 @@ def _ocr_page(page, ocr_lang: str) -> str:
         return ""
 
 
-LOADERS = {".docx": load_docx, ".pptx": load_pptx, ".pdf": load_pdf}
+def load_txt(path: str | Path) -> list[TextBlock]:
+    text = Path(path).read_text(encoding="utf-8", errors="ignore")
+    blocks: list[TextBlock] = []
+    for i, para in enumerate(re.split(r"\n\s*\n", text)):
+        para = para.strip()
+        if para:
+            blocks.append(TextBlock(text=para, kind="paragraph", location=f"para {i}"))
+    return blocks
+
+
+LOADERS = {".docx": load_docx, ".pptx": load_pptx, ".pdf": load_pdf, ".txt": load_txt}
 
 
 def load_document(path: str | Path) -> tuple[list[TextBlock], FileMeta]:

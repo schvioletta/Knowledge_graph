@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import GraphView from "./components/GraphView";
 import SearchBar from "./components/SearchBar";
+import SourcesPanel from "./components/SourcesPanel";
 import ResultsPanel from "./components/ResultsPanel";
 import FilterDock from "./components/FilterDock";
 import NavBar from "./components/NavBar";
@@ -59,6 +60,15 @@ export default function App() {
   const [filterOpen, setFilterOpen] = useState(true);
   const [resultsTab, setResultsTab] = useState("answer");
 
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [sourceError, setSourceError] = useState("");
+  const [ragResult, setRagResult] = useState(null);
+  const [ragLoading, setRagLoading] = useState(false);
+
+  const refreshDocuments = () => api.listDocuments().then(setDocuments);
+
   useEffect(() => {
     api.fullGraph().then((vis) => {
       const [nm, ls] = mergeVis({}, [], vis);
@@ -67,6 +77,7 @@ export default function App() {
       setFitSignal((s) => s + 1);
     });
     api.timeline().then(setTimelineDates);
+    refreshDocuments();
   }, []);
 
   useEffect(() => {
@@ -153,9 +164,43 @@ export default function App() {
     setLinks((prev) => mergeVis(nodesMap, prev, vis)[1]);
   };
 
+  const handleUpload = async (file) => {
+    setUploading(true);
+    setSourceError("");
+    try {
+      await api.uploadDocument(file);
+      await refreshDocuments();
+    } catch (e) {
+      setSourceError(e.message || "Не удалось загрузить файл");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAddLink = async (url) => {
+    setLinkSubmitting(true);
+    setSourceError("");
+    try {
+      await api.addLink(url);
+      await refreshDocuments();
+    } catch (e) {
+      setSourceError(e.message || "Не удалось добавить ссылку");
+    } finally {
+      setLinkSubmitting(false);
+    }
+  };
+
   const handleSearch = async (question) => {
     setSearchLoading(true);
+    setRagLoading(true);
     setGapEnabled(false);
+    // Граф-поиск (структурные запросы к базе знаний) и RAG по загруженным
+    // документам — независимые источники ответа, поэтому запускаются
+    // параллельно и показываются на отдельных вкладках, а не подменяют друг друга.
+    const ragPromise = api.ragAsk(question)
+      .then((r) => { setRagResult(r); return r; })
+      .catch(() => { setRagResult(null); return null; })
+      .finally(() => setRagLoading(false));
     try {
       const result = await api.search(question);
       setNodesMap((prev) => mergeVis(prev, links, result.subgraph)[0]);
@@ -164,11 +209,14 @@ export default function App() {
       setAnswer(result.answer);
       setSelectedNode(null);
       setDetail(null);
-      setResultsTab("answer");
       setFitSignal((s) => s + 1);
     } finally {
       setSearchLoading(false);
     }
+    // Если в загруженных документах нашлось обоснованное подтверждение —
+    // это самый надёжный ответ (с цитатами), показываем его в первую очередь.
+    const ragOutcome = await ragPromise;
+    setResultsTab(ragOutcome?.grounded ? "documents" : "answer");
   };
 
   const handleExampleSelect = (question) => {
@@ -231,8 +279,16 @@ export default function App() {
         {/* Toolbar поиска — только строка поиска; ответ теперь живёт в правой
             панели результатов (вкладка «Текстовый ответ»), не над input. */}
         <div id="search-toolbar" className="border-b border-ink/10 bg-bg px-6 py-4">
-          <div className="mx-auto max-w-[1600px]">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
             <SearchBar onSearch={handleSearch} loading={searchLoading} />
+            <SourcesPanel
+              documents={documents}
+              onUpload={handleUpload}
+              onAddLink={handleAddLink}
+              uploading={uploading}
+              linkSubmitting={linkSubmitting}
+              error={sourceError}
+            />
           </div>
         </div>
 
@@ -302,6 +358,8 @@ export default function App() {
                 onTabChange={setResultsTab}
                 answer={answer}
                 onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
+                ragResult={ragResult}
+                ragLoading={ragLoading}
                 node={selectedNode}
                 detail={detail}
                 onExpand={handleExpand}
@@ -338,6 +396,8 @@ export default function App() {
                 onTabChange={setResultsTab}
                 answer={answer}
                 onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
+                ragResult={ragResult}
+                ragLoading={ragLoading}
                 node={selectedNode}
                 detail={detail}
                 onExpand={handleExpand}

@@ -145,16 +145,27 @@ def hybrid_search(gs: GraphStore, question: str) -> dict[str, Any]:
     year_cutoff = _detect_year_cutoff(text)
     numeric_filters = _extract_numeric_filters(text)
 
-    experiments = gs.query_experiments(
-        material=[m["name"] for m in materials] if materials else None,
-        process=[p["name"] for p in processes] if processes else None,
-        condition=condition["name"] if condition else None,
-        prop=prop["name"] if prop else None,
-        equipment=equipment["name"] if equipment else None,
-        facility=facility["name"] if facility else None,
-        country=country,
-        numeric_filters=numeric_filters,
-    )
+    # Если в вопросе не распознано ни одного якоря (материал/процесс/условие/
+    # свойство/оборудование/предприятие) и нет числовых/гео-ограничений, query_experiments
+    # вызывать нельзя: все его фильтры будут пустыми, а пустой фильтр в query_experiments
+    # означает «не фильтровать» — в ответ вернулся бы ВЕСЬ граф экспериментов, как будто
+    # они все релевantны произвольному нераспознанному вопросу. Это ровно тот
+    # неподтверждённый ответ, которого просили избегать — поэтому в этом случае сразу
+    # считаем, что совпадений нет, и уходим в ветку «не удалось распознать».
+    has_anchor = bool(materials or processes or condition or prop or equipment or facility)
+    if has_anchor or numeric_filters or country:
+        experiments = gs.query_experiments(
+            material=[m["name"] for m in materials] if materials else None,
+            process=[p["name"] for p in processes] if processes else None,
+            condition=condition["name"] if condition else None,
+            prop=prop["name"] if prop else None,
+            equipment=equipment["name"] if equipment else None,
+            facility=facility["name"] if facility else None,
+            country=country,
+            numeric_filters=numeric_filters,
+        )
+    else:
+        experiments = []
     if year_cutoff:
         experiments = [e for e in experiments if str(e.get("date", "")) >= year_cutoff]
 

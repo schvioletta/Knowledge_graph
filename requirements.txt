@@ -10,12 +10,14 @@ pypdf
 qdrant-client
 python-dotenv
 fastapi
+python-multipart
 uvicorn[standard]
 networkx
 neo4j
 python-docx
 python-pptx
 requests
+beautifulsoup4
 pymupdf
 pytesseract
 langdetect
