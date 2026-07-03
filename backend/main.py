@@ -5,9 +5,10 @@ import os
 import uuid
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -20,6 +21,7 @@ load_dotenv()
 from backend.graph_store import GraphStore
 from backend.hybrid_retriever import hybrid_search
 from backend.nlp_pipeline.ingest import LOADERS, load_document
+from backend.rag.export_pdf import build_answer_pdf
 from backend.rag.ingest_link import fetch_url_blocks
 from backend.rag.qa import answer_question
 from backend.rag.store import Neo4jDocumentStore
@@ -214,3 +216,29 @@ def delete_document(doc_id: str):
 @app.get("/api/rag/ask")
 def rag_ask(q: str = Query(..., min_length=1)):
     return answer_question(rag_store, q)
+
+
+class RagExportRequest(BaseModel):
+    question: str
+    answer: str
+    confidence: str = "нет данных"
+    citations: list[dict[str, Any]] = []
+    grounded: bool = False
+    llm_used: bool = False
+
+
+@app.post("/api/rag/export/pdf")
+def rag_export_pdf(payload: RagExportRequest):
+    # PDF — единственный из трёх форматов экспорта, который генерируется на
+    # бэкенде (JSON/Markdown фронтенд собирает сам из уже полученного ответа):
+    # для кириллицы нужен встроенный TTF-шрифт (fpdf2/rag/export_pdf.py),
+    # тащить шрифт и верстку на клиент ради одного экспорта не оправдано.
+    pdf_bytes = build_answer_pdf(
+        question=payload.question, answer=payload.answer, confidence=payload.confidence,
+        citations=payload.citations, grounded=payload.grounded, llm_used=payload.llm_used,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="rag-answer.pdf"'},
+    )

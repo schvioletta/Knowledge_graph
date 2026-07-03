@@ -1,5 +1,10 @@
-import { Network, FileSearch, Loader2, FileText, Link as LinkIcon, AlertTriangle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Network, FileSearch, Loader2, FileText, Link as LinkIcon, AlertTriangle,
+  Download, ChevronDown, FileJson, FileType,
+} from "lucide-react";
 import DetailPanel from "./DetailPanel";
+import { exportAsJson, exportAsMarkdown, exportAsPdf } from "../utils/exportAnswer";
 
 const TABS = [
   { id: "documents", label: "По документам", icon: FileSearch },
@@ -13,7 +18,78 @@ const CONFIDENCE_STYLE = {
   "нет данных": "border-ink/20 text-ink/40",
 };
 
-function RagAnswer({ loading, result }) {
+const EXPORT_FORMATS = [
+  { id: "json", label: "JSON", icon: FileJson, run: exportAsJson },
+  { id: "pdf", label: "PDF", icon: FileType, run: exportAsPdf },
+  { id: "md", label: "Markdown (.md)", icon: FileText, run: exportAsMarkdown },
+];
+
+function ExportMenu({ question, result }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const handleExport = async (format) => {
+    setOpen(false);
+    setError("");
+    setBusy(true);
+    try {
+      await format.run({ question, result });
+    } catch (e) {
+      setError(e.message || "Не удалось экспортировать");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative ml-auto">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={busy}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded border border-ink/20 px-2.5 py-1 text-xs text-ink/70 transition hover:border-primary/50 hover:text-ink disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+        Выгрузить в
+        <ChevronDown size={12} className={`transition ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-md border border-ink/15 bg-surface-deep shadow-lg">
+          {EXPORT_FORMATS.map((f) => {
+            const Icon = f.icon;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => handleExport(f)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink/80 transition hover:bg-ink/10 hover:text-ink"
+              >
+                <Icon size={13} />
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {error && <p className="absolute right-0 top-full mt-9 w-56 text-[11px] text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+function RagAnswer({ loading, result, question }) {
   if (loading) {
     return (
       <div className="flex h-full items-center gap-2 p-5 text-sm text-ink/50">
@@ -52,6 +128,7 @@ function RagAnswer({ loading, result }) {
             без LLM-синтеза
           </span>
         )}
+        {result.grounded && <ExportMenu question={question} result={result} />}
       </div>
 
       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
@@ -80,7 +157,9 @@ function RagAnswer({ loading, result }) {
   );
 }
 
-export default function ResultsPanel({ activeTab, onTabChange, ragResult, ragLoading, node, detail, onExpand, onClose }) {
+export default function ResultsPanel({
+  activeTab, onTabChange, question, ragResult, ragLoading, node, detail, onExpand, onClose,
+}) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 border-b border-ink/10">
@@ -106,7 +185,7 @@ export default function ResultsPanel({ activeTab, onTabChange, ragResult, ragLoa
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "documents" && <RagAnswer loading={ragLoading} result={ragResult} />}
+        {activeTab === "documents" && <RagAnswer loading={ragLoading} result={ragResult} question={question} />}
 
         {activeTab === "schema" && (
           <DetailPanel node={node} detail={detail} onExpand={onExpand} onClose={onClose} />

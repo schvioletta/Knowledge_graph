@@ -6,6 +6,7 @@ gigachat
 openai
 pydantic>=2
 sentence-transformers
+fpdf2
 pypdf
 qdrant-client
 python-dotenv

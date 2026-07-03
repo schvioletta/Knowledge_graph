@@ -5,6 +5,7 @@ import GraphView from "./components/GraphView";
 import SearchBar from "./components/SearchBar";
 import SourcesPanel from "./components/SourcesPanel";
 import ResultsPanel from "./components/ResultsPanel";
+import HistoryPanel from "./components/HistoryPanel";
 import FilterDock from "./components/FilterDock";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -16,6 +17,18 @@ import RequirementsStatus from "./sections/RequirementsStatus";
 import Architecture from "./sections/Architecture";
 import { api } from "./api";
 import { FILTERABLE_TYPES } from "./constants";
+
+const HISTORY_STORAGE_KEY = "kg-rag-history";
+const HISTORY_LIMIT = 50;
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 function mergeVis(nodesMap, links, vis) {
   const newNodesMap = { ...nodesMap };
@@ -66,6 +79,15 @@ export default function App() {
   const [sourceNotice, setSourceNotice] = useState("");
   const [ragResult, setRagResult] = useState(null);
   const [ragLoading, setRagLoading] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState("");
+
+  const [history, setHistory] = useState(loadHistory);
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(true);
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  }, [history]);
 
   const refreshDocuments = () => api.listDocuments().then(setDocuments);
 
@@ -218,12 +240,23 @@ export default function App() {
     setSearchLoading(true);
     setRagLoading(true);
     setGapEnabled(false);
+    setCurrentQuestion(question);
+    setActiveHistoryId(null);
     // Граф-поиск структурно подсвечивает путь рассуждения прямо на графе
     // (см. highlightIds) — сам текстовый ответ графа больше нигде не
     // показывается, единственный текстовый ответ в интерфейсе теперь RAG
     // по загруженным документам (вкладка «По документам»).
     const ragPromise = api.ragAsk(question)
-      .then((r) => { setRagResult(r); return r; })
+      .then((r) => {
+        setRagResult(r);
+        // Каждый реально полученный ответ попадает в историю (даже «не нашлось» —
+        // это тоже завершённый ответ) — открыть его снова потом можно без
+        // повторного запроса к LLM/эмбеддингам, см. handleHistorySelect.
+        const entry = { id: crypto.randomUUID(), question, timestamp: Date.now(), ragResult: r };
+        setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
+        setActiveHistoryId(entry.id);
+        return r;
+      })
       .catch(() => { setRagResult(null); return null; })
       .finally(() => setRagLoading(false));
     try {
@@ -239,6 +272,25 @@ export default function App() {
     }
     setResultsTab("documents");
     await ragPromise;
+  };
+
+  const handleHistorySelect = (entry) => {
+    // Открывает уже полученный ответ без повторного обращения к API — история
+    // хранит полный ragResult, а не только вопрос.
+    setRagResult(entry.ragResult);
+    setCurrentQuestion(entry.question);
+    setActiveHistoryId(entry.id);
+    setResultsTab("documents");
+  };
+
+  const handleHistoryDelete = (id) => {
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+    if (activeHistoryId === id) setActiveHistoryId(null);
+  };
+
+  const handleHistoryClear = () => {
+    setHistory([]);
+    setActiveHistoryId(null);
   };
 
   const toggleType = (type) => {
@@ -402,18 +454,71 @@ export default function App() {
           </div>
 
           {/* Панель результатов — под графом, во всю ширину, с собственной
-              ограниченной высотой и внутренним скроллом (см. комментарий выше). */}
+              ограниченной высотой и внутренним скроллом (см. комментарий выше).
+              История запросов — сворачиваемая колонка слева от неё, тот же
+              паттерн (grid-cols + min-h-0/overflow-hidden), что и у фильтров
+              графа выше; открыта по умолчанию. */}
           <div className="border-t border-ink/10 p-4">
-            <div className="h-[380px] overflow-hidden rounded-md border border-ink/10">
-              <ResultsPanel
-                activeTab={resultsTab}
-                onTabChange={setResultsTab}
-                ragResult={ragResult}
-                ragLoading={ragLoading}
-                node={selectedNode}
-                detail={detail}
-                onExpand={handleExpand}
-                onClose={() => { setSelectedNode(null); setDetail(null); }}
+            <div
+              className={`grid h-[380px] w-full overflow-hidden rounded-md border border-ink/10 ${
+                historyOpen ? "lg:grid-cols-[240px_1fr]" : "lg:grid-cols-[44px_1fr]"
+              }`}
+            >
+              <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden">
+                <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-2 py-2">
+                  {historyOpen && (
+                    <span className="pl-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/60">
+                      История запросов
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    aria-label={historyOpen ? "Свернуть панель истории" : "Развернуть панель истории"}
+                    aria-expanded={historyOpen}
+                    className="ml-auto rounded p-1.5 text-ink/60 transition hover:bg-ink/5 hover:text-ink"
+                  >
+                    {historyOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+                  </button>
+                </div>
+                {historyOpen && (
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <HistoryPanel
+                      history={history}
+                      activeId={activeHistoryId}
+                      onSelect={handleHistorySelect}
+                      onDelete={handleHistoryDelete}
+                      onClear={handleHistoryClear}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-h-0 min-w-0 overflow-hidden">
+                <ResultsPanel
+                  activeTab={resultsTab}
+                  onTabChange={setResultsTab}
+                  question={currentQuestion}
+                  ragResult={ragResult}
+                  ragLoading={ragLoading}
+                  node={selectedNode}
+                  detail={detail}
+                  onExpand={handleExpand}
+                  onClose={() => { setSelectedNode(null); setDetail(null); }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* История на мобильных — на десктопе она уже колонкой в сетке выше */}
+          <div className="border-t border-ink/10 p-4 lg:hidden">
+            <div className="h-[220px] overflow-hidden rounded-md border border-ink/10">
+              <HistoryPanel
+                history={history}
+                activeId={activeHistoryId}
+                onSelect={handleHistorySelect}
+                onDelete={handleHistoryDelete}
+                onClear={handleHistoryClear}
               />
             </div>
           </div>
