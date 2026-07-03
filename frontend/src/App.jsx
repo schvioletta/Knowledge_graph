@@ -12,7 +12,6 @@ import ProblemCards from "./sections/ProblemCards";
 import Pipeline from "./sections/Pipeline";
 import Capabilities from "./sections/Capabilities";
 import Coverage from "./sections/Coverage";
-import ExampleQueries from "./sections/ExampleQueries";
 import RequirementsStatus from "./sections/RequirementsStatus";
 import Architecture from "./sections/Architecture";
 import { api } from "./api";
@@ -242,11 +241,6 @@ export default function App() {
     await ragPromise;
   };
 
-  const handleExampleSelect = (question) => {
-    document.getElementById("workbench")?.scrollIntoView({ behavior: "smooth" });
-    handleSearch(question);
-  };
-
   const toggleType = (type) => {
     setTypeFilter((prev) => {
       const next = new Set(prev);
@@ -282,20 +276,6 @@ export default function App() {
                 Единая интеллектуальная карта исследований, экспериментов, публикаций,
                 технологий и экспертов.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#search-toolbar"
-                  className="rounded bg-primary px-5 py-2.5 text-sm font-semibold text-bg transition hover:brightness-110"
-                >
-                  Попробовать поиск
-                </a>
-                <a
-                  href="#examples"
-                  className="rounded border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/60"
-                >
-                  Посмотреть демо
-                </a>
-              </div>
             </motion.div>
           </div>
         </div>
@@ -444,7 +424,6 @@ export default function App() {
       <Pipeline />
       <Capabilities />
       <Coverage nodesMap={nodesMap} />
-      <ExampleQueries onSelect={handleExampleSelect} />
       <RequirementsStatus />
       <Architecture />
       <Footer />
