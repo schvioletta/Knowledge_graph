@@ -221,4 +221,5 @@ data/raw/
 .DS_Store
 .idea/
 
-./data/llm_logs/
+data/llm_logs/
+data/search_results/
