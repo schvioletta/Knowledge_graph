@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import GraphView from "./components/GraphView";
 import SearchBar from "./components/SearchBar";
-import DetailPanel from "./components/DetailPanel";
+import ResultsPanel from "./components/ResultsPanel";
 import FilterDock from "./components/FilterDock";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
-import Card from "./components/ui/Card";
 import ProblemCards from "./sections/ProblemCards";
 import Pipeline from "./sections/Pipeline";
 import Capabilities from "./sections/Capabilities";
@@ -56,6 +56,8 @@ export default function App() {
   const [cursor, setCursor] = useState(0);
 
   const [typeFilter, setTypeFilter] = useState(() => new Set(FILTERABLE_TYPES));
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [resultsTab, setResultsTab] = useState("answer");
 
   useEffect(() => {
     api.fullGraph().then((vis) => {
@@ -136,11 +138,11 @@ export default function App() {
   const handleNodeClick = async (node) => {
     setSelectedNode(node);
     setHighlightIds(new Set());
-    setAnswer("");
     if (node.type === "ghost") {
       setDetail(null);
       return;
     }
+    setResultsTab("schema");
     const d = await api.node(node.id);
     setDetail(d);
   };
@@ -162,6 +164,7 @@ export default function App() {
       setAnswer(result.answer);
       setSelectedNode(null);
       setDetail(null);
+      setResultsTab("answer");
       setFitSignal((s) => s + 1);
     } finally {
       setSearchLoading(false);
@@ -225,53 +228,62 @@ export default function App() {
           </div>
         </div>
 
-        {/* Toolbar поиска */}
+        {/* Toolbar поиска — только строка поиска; ответ теперь живёт в правой
+            панели результатов (вкладка «Текстовый ответ»), не над input. */}
         <div id="search-toolbar" className="border-b border-ink/10 bg-bg px-6 py-4">
-          <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
-            {answer && (
-              <Card className="p-4">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">
-                  Ответ по графу
-                </div>
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
-                  {answer}
-                </pre>
-                <button
-                  onClick={() => { setAnswer(""); setHighlightIds(new Set()); }}
-                  className="mt-2 rounded border border-ink/20 px-2.5 py-1 text-xs text-ink/60 transition hover:text-ink"
-                >
-                  Сбросить подсветку
-                </button>
-              </Card>
-            )}
+          <div className="mx-auto max-w-[1600px]">
             <SearchBar onSearch={handleSearch} loading={searchLoading} />
           </div>
         </div>
 
-        {/* Дашборд: фильтры | граф | детали */}
+        {/* Дашборд: фильтры (сворачиваемая панель) | граф | результаты */}
         <div className="mx-auto max-w-[1600px]">
-          <div className="grid h-[640px] w-full lg:grid-cols-[280px_1fr_320px]">
-            <div className="hidden border-r border-ink/10 lg:block">
-              <FilterDock
-                typeFilter={typeFilter}
-                onToggleType={toggleType}
-                onResetTypes={resetTypes}
-                gapProps={{
-                  enabled: gapEnabled,
-                  onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
-                  xAxis: gapX,
-                  yAxis: gapY,
-                  onAxisChange: (x, y) => { setGapX(x); setGapY(y); },
-                  gapCount: gapNodes.length,
-                }}
-                timelineProps={{
-                  enabled: timelineEnabled,
-                  onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
-                  dates: timelineDates,
-                  cursor,
-                  onCursorChange: setCursor,
-                }}
-              />
+          <div
+            className={`grid h-[640px] w-full transition-[grid-template-columns] duration-200 ${
+              filterOpen ? "lg:grid-cols-[280px_1fr_360px]" : "lg:grid-cols-[44px_1fr_360px]"
+            }`}
+          >
+            <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:flex-col lg:overflow-hidden">
+              <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-2 py-2">
+                {filterOpen && (
+                  <span className="pl-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/60">
+                    Фильтры
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen((v) => !v)}
+                  aria-label={filterOpen ? "Свернуть панель фильтров" : "Развернуть панель фильтров"}
+                  aria-expanded={filterOpen}
+                  className="ml-auto rounded p-1.5 text-ink/60 transition hover:bg-ink/5 hover:text-ink"
+                >
+                  {filterOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+                </button>
+              </div>
+              {filterOpen && (
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <FilterDock
+                    typeFilter={typeFilter}
+                    onToggleType={toggleType}
+                    onResetTypes={resetTypes}
+                    gapProps={{
+                      enabled: gapEnabled,
+                      onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); } },
+                      xAxis: gapX,
+                      yAxis: gapY,
+                      onAxisChange: (x, y) => { setGapX(x); setGapY(y); },
+                      gapCount: gapNodes.length,
+                    }}
+                    timelineProps={{
+                      enabled: timelineEnabled,
+                      onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); } },
+                      dates: timelineDates,
+                      cursor,
+                      onCursorChange: setCursor,
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="min-h-[420px] min-w-0 overflow-hidden border-ink/10 lg:border-r">
@@ -285,7 +297,11 @@ export default function App() {
             </div>
 
             <div className="hidden border-l border-ink/10 lg:block">
-              <DetailPanel
+              <ResultsPanel
+                activeTab={resultsTab}
+                onTabChange={setResultsTab}
+                answer={answer}
+                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
                 node={selectedNode}
                 detail={detail}
                 onExpand={handleExpand}
@@ -294,7 +310,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Стековая раскладка для узких экранов: фильтры и детали графа под канвасом */}
+          {/* Стековая раскладка для узких экранов: фильтры и результаты под канвасом */}
           <div className="flex flex-col gap-4 border-t border-ink/10 p-4 lg:hidden">
             <FilterDock
               typeFilter={typeFilter}
@@ -302,7 +318,7 @@ export default function App() {
               onResetTypes={resetTypes}
               gapProps={{
                 enabled: gapEnabled,
-                onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                onToggle: (v) => { setGapEnabled(v); if (v) { setHighlightIds(new Set()); } },
                 xAxis: gapX,
                 yAxis: gapY,
                 onAxisChange: (x, y) => { setGapX(x); setGapY(y); },
@@ -310,18 +326,24 @@ export default function App() {
               }}
               timelineProps={{
                 enabled: timelineEnabled,
-                onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); setAnswer(""); } },
+                onToggle: (v) => { setTimelineEnabled(v); if (v) { setHighlightIds(new Set()); } },
                 dates: timelineDates,
                 cursor,
                 onCursorChange: setCursor,
               }}
             />
-            <DetailPanel
-              node={selectedNode}
-              detail={detail}
-              onExpand={handleExpand}
-              onClose={() => { setSelectedNode(null); setDetail(null); }}
-            />
+            <div className="h-[420px] overflow-hidden rounded-md border border-ink/10">
+              <ResultsPanel
+                activeTab={resultsTab}
+                onTabChange={setResultsTab}
+                answer={answer}
+                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
+                node={selectedNode}
+                detail={detail}
+                onExpand={handleExpand}
+                onClose={() => { setSelectedNode(null); setDetail(null); }}
+              />
+            </div>
           </div>
         </div>
       </section>

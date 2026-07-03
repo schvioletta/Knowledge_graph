@@ -53,7 +53,7 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
   if (!node) {
     return (
       <div className="flex h-full items-center p-5 text-sm text-ink/50">
-        Выберите узел на графе, чтобы увидеть детали, или задайте вопрос выше.
+        Выберите узел на графе, чтобы увидеть детали и связи.
       </div>
     );
   }

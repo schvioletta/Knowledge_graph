@@ -1,0 +1,19 @@
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: kg_neo4j
+    ports:
+      - "7474:7474"   # Neo4j Browser (http://localhost:7474)
+      - "7687:7687"   # Bolt (используется backend/graph_store_neo4j.py)
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-changeme12345}
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  neo4j_data:
