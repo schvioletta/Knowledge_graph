@@ -46,4 +46,10 @@ export const api = {
   },
 
   ragAsk: (q) => getJson(`/api/rag/ask?q=${encodeURIComponent(q)}`),
+
+  deleteDocument: async (id) => {
+    const res = await fetch(`${BASE}/api/documents/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) await throwWithDetail(res);
+    return res.json();
+  },
 };

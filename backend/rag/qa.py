@@ -13,6 +13,8 @@ from __future__ import annotations
 from typing import Any
 
 from backend.llm_client import complete as llm_complete
+from backend.llm_client import get_last_error as llm_last_error
+from backend.llm_client import is_configured as llm_configured
 from backend.rag.store import DocumentStore
 
 _NOT_FOUND_ANSWER = (
@@ -48,6 +50,7 @@ def answer_question(store: DocumentStore, question: str, top_k: int = 6) -> dict
             "confidence": "нет данных",
             "citations": [],
             "grounded": False,
+            "llm_used": False,
         }
 
     citations = []
@@ -82,17 +85,25 @@ def answer_question(store: DocumentStore, question: str, top_k: int = 6) -> dict
 
     if llm_answer:
         answer = llm_answer
+        llm_ok = True
     else:
         # Без LLM — детерминированный, но честный фолбэк: сами фрагменты (полнее, чем короткий
         # snippet в citations — там это просто превью для UI) с указанием источников, а не
-        # тишина и не выдумка.
-        answer = "LLM недоступен — показаны наиболее релевантные фрагменты источников:\n\n" + "\n\n".join(
+        # тишина и не выдумка. Причина фолбэка — не общая, а конкретная: «ключ не задан» и
+        # «ключ задан, но вызов упал» требуют разных действий от того, кто это читает.
+        if not llm_configured():
+            reason = "LLM не настроен (нет YANDEX_API_KEY/YANDEX_FOLDER_ID — см. .env.example)"
+        else:
+            reason = f"вызов LLM не удался ({llm_last_error() or 'неизвестная ошибка'})"
+        answer = f"{reason}. Показаны наиболее релевантные фрагменты источников:\n\n" + "\n\n".join(
             f"[{i}] {hit['chunk'].text[:600]}" for i, hit in enumerate(hits, start=1)
         )
+        llm_ok = False
 
     return {
         "answer": answer,
         "confidence": confidence,
         "citations": citations,
         "grounded": True,
+        "llm_used": llm_ok,
     }

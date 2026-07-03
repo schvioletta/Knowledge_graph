@@ -281,7 +281,11 @@ export default function GraphView({
   }, []);
 
   return (
-    <div ref={wrapperRef} className="h-full w-full" style={{ cursor: hoveredNodeId ? "pointer" : "default" }}>
+    <div
+      ref={wrapperRef}
+      className="h-full w-full"
+      style={{ cursor: hoveredNodeId ? "pointer" : "default", contain: "strict", isolation: "isolate" }}
+    >
       <ForceGraph2D
         ref={fgRef}
         width={size.width || undefined}

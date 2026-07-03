@@ -18,7 +18,7 @@ export default function SearchBar({ onSearch, loading }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Что известно по материалу X при процессе Y и условии Z? Какой эффект на свойство W?"
-          className="min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-ink/40 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-ink/40 outline-none focus:outline-none focus-visible:outline-none"
         />
         <button
           type="submit"

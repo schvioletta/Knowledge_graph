@@ -9,7 +9,7 @@ const LINKS = [
 
 export default function NavBar() {
   return (
-    <header className="sticky top-0 z-50 bg-bg">
+    <header className="sticky top-0 z-50 bg-bg [transform:translateZ(0)] [will-change:transform]">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 py-3">
         <a href="#top" className="flex items-center gap-2 text-ink">
           <span className="flex h-8 w-8 items-center justify-center rounded bg-gradient-to-br from-primary to-accent">

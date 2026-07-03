@@ -1,9 +1,19 @@
 import { useRef, useState } from "react";
-import { Upload, Link as LinkIcon, FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, Link as LinkIcon, FileText, Loader2, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
-export default function SourcesPanel({ documents, onUpload, onAddLink, uploading, linkSubmitting, error }) {
+export default function SourcesPanel({
+  documents,
+  onUpload,
+  onAddLink,
+  onDelete,
+  deletingId,
+  uploading,
+  linkSubmitting,
+  error,
+  notice,
+}) {
   const fileInputRef = useRef();
   const [linkValue, setLinkValue] = useState("");
 
@@ -60,7 +70,7 @@ export default function SourcesPanel({ documents, onUpload, onAddLink, uploading
             value={linkValue}
             onChange={(e) => setLinkValue(e.target.value)}
             placeholder="Ссылка на статью или документ (https://…)"
-            className="min-w-0 flex-1 bg-transparent text-xs text-ink placeholder:text-ink/40 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-xs text-ink placeholder:text-ink/40 outline-none focus:outline-none focus-visible:outline-none"
           />
         </div>
         <button
@@ -77,6 +87,13 @@ export default function SourcesPanel({ documents, onUpload, onAddLink, uploading
         <div className="flex items-center gap-1.5 text-xs text-red-400">
           <AlertCircle size={13} className="shrink-0" />
           {error}
+        </div>
+      )}
+
+      {!error && notice && (
+        <div className="flex items-center gap-1.5 text-xs text-ink/50">
+          <Info size={13} className="shrink-0" />
+          {notice}
         </div>
       )}
 
@@ -101,6 +118,15 @@ export default function SourcesPanel({ documents, onUpload, onAddLink, uploading
                   ошибка
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => onDelete(d.id)}
+                disabled={deletingId === d.id}
+                aria-label={`Удалить источник «${d.title}»`}
+                className="ml-0.5 rounded-full p-0.5 text-ink/40 transition hover:bg-red-400/10 hover:text-red-400 disabled:opacity-50"
+              >
+                {deletingId === d.id ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+              </button>
             </li>
           ))}
         </ul>

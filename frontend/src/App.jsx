@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, RotateCcw } from "lucide-react";
 import GraphView from "./components/GraphView";
 import SearchBar from "./components/SearchBar";
 import SourcesPanel from "./components/SourcesPanel";
@@ -42,7 +42,6 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [highlightIds, setHighlightIds] = useState(new Set());
-  const [answer, setAnswer] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [fitSignal, setFitSignal] = useState(0);
 
@@ -58,12 +57,14 @@ export default function App() {
 
   const [typeFilter, setTypeFilter] = useState(() => new Set(FILTERABLE_TYPES));
   const [filterOpen, setFilterOpen] = useState(true);
-  const [resultsTab, setResultsTab] = useState("answer");
+  const [resultsTab, setResultsTab] = useState("documents");
 
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [sourceError, setSourceError] = useState("");
+  const [sourceNotice, setSourceNotice] = useState("");
   const [ragResult, setRagResult] = useState(null);
   const [ragLoading, setRagLoading] = useState(false);
 
@@ -167,8 +168,15 @@ export default function App() {
   const handleUpload = async (file) => {
     setUploading(true);
     setSourceError("");
+    setSourceNotice("");
     try {
-      await api.uploadDocument(file);
+      const doc = await api.uploadDocument(file);
+      // Дубликат по содержимому (см. backend/rag/store.py) — эмбеддинги не
+      // пересчитывались, файл не сохранялся повторно; сообщаем явно, чтобы
+      // не выглядело так, будто загрузка молча ничего не сделала.
+      if (doc.duplicate) {
+        setSourceNotice(`«${doc.title}» уже есть в базе — повторно не обрабатывали.`);
+      }
       await refreshDocuments();
     } catch (e) {
       setSourceError(e.message || "Не удалось загрузить файл");
@@ -180,8 +188,12 @@ export default function App() {
   const handleAddLink = async (url) => {
     setLinkSubmitting(true);
     setSourceError("");
+    setSourceNotice("");
     try {
-      await api.addLink(url);
+      const doc = await api.addLink(url);
+      if (doc.duplicate) {
+        setSourceNotice(`«${doc.title}» уже есть в базе — повторно не обрабатывали.`);
+      }
       await refreshDocuments();
     } catch (e) {
       setSourceError(e.message || "Не удалось добавить ссылку");
@@ -190,13 +202,27 @@ export default function App() {
     }
   };
 
+  const handleDeleteDocument = async (id) => {
+    setDeletingId(id);
+    setSourceError("");
+    try {
+      await api.deleteDocument(id);
+      await refreshDocuments();
+    } catch (e) {
+      setSourceError(e.message || "Не удалось удалить источник");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleSearch = async (question) => {
     setSearchLoading(true);
     setRagLoading(true);
     setGapEnabled(false);
-    // Граф-поиск (структурные запросы к базе знаний) и RAG по загруженным
-    // документам — независимые источники ответа, поэтому запускаются
-    // параллельно и показываются на отдельных вкладках, а не подменяют друг друга.
+    // Граф-поиск структурно подсвечивает путь рассуждения прямо на графе
+    // (см. highlightIds) — сам текстовый ответ графа больше нигде не
+    // показывается, единственный текстовый ответ в интерфейсе теперь RAG
+    // по загруженным документам (вкладка «По документам»).
     const ragPromise = api.ragAsk(question)
       .then((r) => { setRagResult(r); return r; })
       .catch(() => { setRagResult(null); return null; })
@@ -206,17 +232,14 @@ export default function App() {
       setNodesMap((prev) => mergeVis(prev, links, result.subgraph)[0]);
       setLinks((prev) => mergeVis(nodesMap, prev, result.subgraph)[1]);
       setHighlightIds(new Set(result.path_node_ids));
-      setAnswer(result.answer);
       setSelectedNode(null);
       setDetail(null);
       setFitSignal((s) => s + 1);
     } finally {
       setSearchLoading(false);
     }
-    // Если в загруженных документах нашлось обоснованное подтверждение —
-    // это самый надёжный ответ (с цитатами), показываем его в первую очередь.
-    const ragOutcome = await ragPromise;
-    setResultsTab(ragOutcome?.grounded ? "documents" : "answer");
+    setResultsTab("documents");
+    await ragPromise;
   };
 
   const handleExampleSelect = (question) => {
@@ -236,12 +259,13 @@ export default function App() {
   const resetTypes = () => setTypeFilter(new Set(FILTERABLE_TYPES));
 
   return (
-    <div id="top" className="min-h-screen bg-bg text-ink">
+    <div id="top" className="min-h-screen text-ink">
       <NavBar />
 
       <section id="workbench" className="border-b border-ink/10">
-        {/* Masthead — структурный навигационный блок, не декоративный hero */}
-        <div className="bg-bg">
+        {/* Masthead — структурный навигационный блок, не декоративный hero.
+            Без своего bg-bg — здесь должен просвечивать фирменный градиент body. */}
+        <div>
           <div className="mx-auto max-w-[1600px] px-6 py-12 md:py-16">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -276,30 +300,40 @@ export default function App() {
           </div>
         </div>
 
-        {/* Toolbar поиска — только строка поиска; ответ теперь живёт в правой
-            панели результатов (вкладка «Текстовый ответ»), не над input. */}
-        <div id="search-toolbar" className="border-b border-ink/10 bg-bg px-6 py-4">
+        {/* Toolbar поиска — только строка поиска; ответ живёт в панели результатов
+            под графом (вкладка «По документам»), не над input. */}
+        <div id="search-toolbar" className="border-b border-ink/10 px-6 py-4">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
             <SearchBar onSearch={handleSearch} loading={searchLoading} />
             <SourcesPanel
               documents={documents}
               onUpload={handleUpload}
               onAddLink={handleAddLink}
+              onDelete={handleDeleteDocument}
+              deletingId={deletingId}
               uploading={uploading}
               linkSubmitting={linkSubmitting}
               error={sourceError}
+              notice={sourceNotice}
             />
           </div>
         </div>
 
-        {/* Дашборд: фильтры (сворачиваемая панель) | граф | результаты */}
+        {/* Дашборд: фильтры (сворачиваемая панель) | граф — фиксированной высоты
+            h-[640px], панель результатов сознательно ВНЕ этой сетки (см. ниже):
+            раньше она была третьей колонкой той же grid-строки, и длинный ответ
+            (особенно RAG-ответ с цитатами) раздувал высоту всей строки через
+            классический CSS grid min-height:auto — из-за этого «плыл» весь
+            график и страница ниже него. Вынос в отдельный блок с собственным
+            ограничением высоты структурно исключает этот баг: контент ответа
+            больше физически не может повлиять на размеры графа. */}
         <div className="mx-auto max-w-[1600px]">
           <div
             className={`grid h-[640px] w-full ${
-              filterOpen ? "lg:grid-cols-[280px_1fr_360px]" : "lg:grid-cols-[44px_1fr_360px]"
+              filterOpen ? "lg:grid-cols-[280px_1fr]" : "lg:grid-cols-[44px_1fr]"
             }`}
           >
-            <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:flex-col lg:overflow-hidden">
+            <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden">
               <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-2 py-2">
                 {filterOpen && (
                   <span className="pl-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/60">
@@ -342,7 +376,17 @@ export default function App() {
               )}
             </div>
 
-            <div className="min-h-[420px] min-w-0 overflow-hidden border-ink/10 lg:border-r">
+            <div className="relative min-h-0 min-w-0 overflow-hidden border-ink/10">
+              {highlightIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setHighlightIds(new Set())}
+                  className="absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded border border-ink/20 bg-surface-deep/90 px-2 py-1 text-xs text-ink/70 backdrop-blur transition hover:border-primary/50 hover:text-ink"
+                >
+                  <RotateCcw size={12} />
+                  Сбросить подсветку
+                </button>
+              )}
               <GraphView
                 graphData={graphData}
                 highlightNodeIds={highlightIds}
@@ -351,25 +395,10 @@ export default function App() {
                 fitSignal={fitSignal}
               />
             </div>
-
-            <div className="hidden border-l border-ink/10 lg:block">
-              <ResultsPanel
-                activeTab={resultsTab}
-                onTabChange={setResultsTab}
-                answer={answer}
-                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
-                ragResult={ragResult}
-                ragLoading={ragLoading}
-                node={selectedNode}
-                detail={detail}
-                onExpand={handleExpand}
-                onClose={() => { setSelectedNode(null); setDetail(null); }}
-              />
-            </div>
           </div>
 
-          {/* Стековая раскладка для узких экранов: фильтры и результаты под канвасом */}
-          <div className="flex flex-col gap-4 border-t border-ink/10 p-4 lg:hidden">
+          {/* Фильтры на мобильных — на десктопе они уже показаны колонкой в сетке выше */}
+          <div className="border-t border-ink/10 p-4 lg:hidden">
             <FilterDock
               typeFilter={typeFilter}
               onToggleType={toggleType}
@@ -390,12 +419,15 @@ export default function App() {
                 onCursorChange: setCursor,
               }}
             />
-            <div className="h-[420px] overflow-hidden rounded-md border border-ink/10">
+          </div>
+
+          {/* Панель результатов — под графом, во всю ширину, с собственной
+              ограниченной высотой и внутренним скроллом (см. комментарий выше). */}
+          <div className="border-t border-ink/10 p-4">
+            <div className="h-[380px] overflow-hidden rounded-md border border-ink/10">
               <ResultsPanel
                 activeTab={resultsTab}
                 onTabChange={setResultsTab}
-                answer={answer}
-                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
                 ragResult={ragResult}
                 ragLoading={ragLoading}
                 node={selectedNode}

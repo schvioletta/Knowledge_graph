@@ -6,9 +6,16 @@ import uuid
 from dataclasses import asdict
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# Без этого .env никогда не читался: os.getenv() ниже (и в llm_client.py) видел
+# только переменные, реально экспортированные в shell, поэтому YANDEX_API_KEY/
+# YANDEX_FOLDER_ID из .env (см. .env.example) молча игнорировались, и LLM всегда
+# уходил в фолбэк "недоступен", даже если ключ был прописан в файле.
+load_dotenv()
 
 from backend.graph_store import GraphStore
 from backend.hybrid_retriever import hybrid_search
@@ -150,8 +157,14 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Не удалось прочитать файл: {e}") from e
 
-    doc = rag_store.add_document(title=file.filename, source_type="file", source_name=file.filename, blocks=blocks)
-    return asdict(doc)
+    doc, is_duplicate = rag_store.add_document(
+        title=file.filename, source_type="file", source_name=file.filename, blocks=blocks
+    )
+    if is_duplicate:
+        # Уже есть документ с тем же текстом (см. add_document) — не тратим место
+        # на дублирующую копию файла на диске, эмбеддинги тоже не пересчитывались.
+        dest.unlink(missing_ok=True)
+    return {**asdict(doc), "duplicate": is_duplicate}
 
 
 @app.post("/api/documents/link")
@@ -165,13 +178,20 @@ def add_link(payload: LinkRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Не удалось загрузить ссылку: {e}") from e
 
-    doc = rag_store.add_document(title=title, source_type="link", source_name=url, blocks=blocks)
-    return asdict(doc)
+    doc, is_duplicate = rag_store.add_document(title=title, source_type="link", source_name=url, blocks=blocks)
+    return {**asdict(doc), "duplicate": is_duplicate}
 
 
 @app.get("/api/documents")
 def list_documents():
     return [asdict(d) for d in rag_store.list_documents()]
+
+
+@app.delete("/api/documents/{doc_id}")
+def delete_document(doc_id: str):
+    if not rag_store.delete_document(doc_id):
+        raise HTTPException(status_code=404, detail="document not found")
+    return {"status": "deleted", "id": doc_id}
 
 
 @app.get("/api/rag/ask")
