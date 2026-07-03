@@ -12,7 +12,7 @@ export default function SearchBar({ onSearch, loading }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 rounded-md border border-ink/20 bg-surface px-3 py-2 focus-within:border-primary">
+      <div className="flex items-center gap-2 rounded-md border border-ink/20 bg-surface-deep px-3 py-2 focus-within:border-primary">
         <Search size={16} className="shrink-0 text-ink/50" />
         <input
           value={value}
@@ -37,7 +37,7 @@ export default function SearchBar({ onSearch, loading }) {
               setValue(ex);
               onSearch(ex);
             }}
-            className="rounded-full border border-ink/20 bg-surface px-2.5 py-1 text-xs text-ink/60 transition hover:border-primary/50 hover:text-ink"
+            className="rounded-full border border-ink/20 bg-surface-deep px-2.5 py-1 text-xs text-ink/60 transition hover:border-primary/50 hover:text-ink"
           >
             {ex}
           </button>

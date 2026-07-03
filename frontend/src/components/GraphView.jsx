@@ -83,6 +83,7 @@ export default function GraphView({
   const fgRef = useRef();
   const wrapperRef = useRef();
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
 
   // react-force-graph-2d only measures its container once on mount; in dev mode
   // Tailwind's stylesheet can land a tick after that first measurement, freezing
@@ -135,7 +136,8 @@ export default function GraphView({
       const radius = Math.max(minScreenRadius, Math.sqrt(node.degree || 1) * 2.2);
       const color = TYPE_COLOR[node.type] || PALETTE.ink;
       const { shape, filled } = TYPE_SHAPE[node.type] || { shape: "circle", filled: true };
-      const isActive = node.id === selectedNodeId || (hasHighlight && highlightNodeIds.has(node.id));
+      const isHovered = node.id === hoveredNodeId;
+      const isActive = node.id === selectedNodeId || isHovered || (hasHighlight && highlightNodeIds.has(node.id));
 
       ctx.save();
       ctx.globalAlpha = dim ? 0.15 : 1;
@@ -162,12 +164,12 @@ export default function GraphView({
         if (isActive) {
           traceShapePath(ctx, shape, node.x, node.y, radius + 2);
           ctx.lineWidth = 2.2 / globalScale;
-          ctx.strokeStyle = PALETTE.primary;
+          ctx.strokeStyle = isHovered ? PALETTE.secondary : PALETTE.primary;
           ctx.stroke();
         }
       }
 
-      if (globalScale > 1.2 || node.id === selectedNodeId || (hasHighlight && highlightNodeIds.has(node.id))) {
+      if (globalScale > 1.2 || node.id === selectedNodeId || isHovered || (hasHighlight && highlightNodeIds.has(node.id))) {
         const label = node.name || node.id;
         const fontSize = 11 / globalScale;
         ctx.font = `${fontSize}px Inter, sans-serif`;
@@ -182,21 +184,52 @@ export default function GraphView({
       }
       ctx.restore();
     },
-    [hasHighlight, highlightNodeIds, selectedNodeId]
+    [hasHighlight, highlightNodeIds, selectedNodeId, hoveredNodeId]
+  );
+
+  const linkEndpoints = useCallback((link) => ({
+    s: link.source?.id ?? link.source,
+    t: link.target?.id ?? link.target,
+  }), []);
+
+  const isPathLink = useCallback(
+    (link) => {
+      if (!hasHighlight) return false;
+      const { s, t } = linkEndpoints(link);
+      return highlightNodeIds.has(s) && highlightNodeIds.has(t);
+    },
+    [hasHighlight, highlightNodeIds, linkEndpoints]
+  );
+
+  const isHoverLink = useCallback(
+    (link) => {
+      if (!hoveredNodeId) return false;
+      const { s, t } = linkEndpoints(link);
+      return s === hoveredNodeId || t === hoveredNodeId;
+    },
+    [hoveredNodeId, linkEndpoints]
+  );
+
+  // Рёбра CONTRADICTS/NEEDS_REVIEW всегда остаются на переднем плане (не гаснут
+  // при поиске/наведении на другой узел) — это сигналы, которые нельзя пропустить.
+  const isSpecialLink = (link) => link.type === "CONTRADICTS" || link.type === "NEEDS_REVIEW";
+  const isActiveLink = useCallback(
+    (link) => isPathLink(link) || isHoverLink(link) || isSpecialLink(link),
+    [isPathLink, isHoverLink]
   );
 
   const linkColor = useCallback(
     (link) => {
-      const s = link.source.id ?? link.source;
-      const t = link.target.id ?? link.target;
-      const active = hasHighlight && highlightNodeIds.has(s) && highlightNodeIds.has(t);
-      if (active) return PALETTE.primary;
-      if (link.type === "CONTRADICTS") return `color-mix(in srgb, ${PALETTE.ink} 75%, transparent)`;
-      if (link.type === "NEEDS_REVIEW") return `color-mix(in srgb, ${PALETTE.ink} 55%, transparent)`;
-      if (hasHighlight) return `color-mix(in srgb, ${PALETTE.ink} 6%, transparent)`;
-      return `color-mix(in srgb, ${PALETTE.ink} 28%, transparent)`;
+      if (isHoverLink(link) || isPathLink(link)) return PALETTE.primary;
+      if (link.type === "CONTRADICTS") return `color-mix(in srgb, ${PALETTE.ink} 92%, transparent)`;
+      if (link.type === "NEEDS_REVIEW") return `color-mix(in srgb, ${PALETTE.ink} 72%, transparent)`;
+      if (hasHighlight) return `color-mix(in srgb, ${PALETTE.ink} 8%, transparent)`;
+      if (hoveredNodeId) return `color-mix(in srgb, ${PALETTE.ink} 12%, transparent)`;
+      // Базовая видимость связей поднята с 28% до 45% — структура графа должна
+      // читаться и без наведения/поиска, а не только в подсвеченном состоянии.
+      return `color-mix(in srgb, ${PALETTE.ink} 45%, transparent)`;
     },
-    [hasHighlight, highlightNodeIds]
+    [isHoverLink, isPathLink, hasHighlight, hoveredNodeId]
   );
 
   const linkLineDash = useCallback((link) => {
@@ -204,14 +237,51 @@ export default function GraphView({
     if (link.type === "NEEDS_REVIEW") return [1, 3];
     return null;
   }, []);
-  const linkWidth = useCallback((link) => {
-    if (link.type === "CONTRADICTS") return 2.2;
-    if (link.type === "NEEDS_REVIEW") return 1.6;
-    return 1;
+
+  const linkWidth = useCallback(
+    (link) => {
+      if (isHoverLink(link) || isPathLink(link)) return 2.6;
+      if (link.type === "CONTRADICTS") return 2.6;
+      if (link.type === "NEEDS_REVIEW") return 2;
+      return 1.3;
+    },
+    [isHoverLink, isPathLink]
+  );
+
+  const linkCanvasObjectMode = useCallback((link) => (isActiveLink(link) ? "before" : undefined), [isActiveLink]);
+
+  // Glow рисуется только для «активных» связей (путь ответа/наведённый узел/
+  // CONTRADICTS/NEEDS_REVIEW) — их всегда немного, поэтому лишняя draw-call на
+  // каждый кадр не бьёт по производительности. Мягкий ореол рисуется ДО
+  // стандартной линии (mode="before"), а поверх него библиотека сама рисует
+  // чёткую линию через linkColor/linkWidth/linkLineDash — это даёт классический
+  // эффект bloom без замены базового рендера.
+  const linkCanvasObject = useCallback(
+    (link, ctx) => {
+      const { source: s, target: t } = link;
+      if (typeof s !== "object" || typeof t !== "object" || s.x == null || t.x == null) return;
+      const color = linkColor(link);
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = linkWidth(link) * 3;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+      ctx.restore();
+    },
+    [linkColor, linkWidth]
+  );
+
+  const handleNodeHover = useCallback((node) => {
+    setHoveredNodeId(node?.id ?? null);
   }, []);
 
   return (
-    <div ref={wrapperRef} className="h-full w-full">
+    <div ref={wrapperRef} className="h-full w-full" style={{ cursor: hoveredNodeId ? "pointer" : "default" }}>
       <ForceGraph2D
         ref={fgRef}
         width={size.width || undefined}
@@ -230,6 +300,9 @@ export default function GraphView({
         linkColor={linkColor}
         linkWidth={linkWidth}
         linkLineDash={linkLineDash}
+        linkCanvasObjectMode={linkCanvasObjectMode}
+        linkCanvasObject={linkCanvasObject}
+        onNodeHover={handleNodeHover}
         onNodeClick={(node) => onNodeClick?.(node)}
         cooldownTicks={100}
       />

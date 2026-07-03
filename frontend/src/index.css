@@ -16,6 +16,10 @@
 @theme {
   --color-bg: #060b12;
   --color-surface: #004c97;
+  /* Более тёмный тёмно-синий вариант surface — та же гамма, что и фон графа
+     (PALETTE.surface в constants.js), используется там, где нужен более
+     тёмный тон (поле поиска, плашки примеров вопросов), а не средний #004c97. */
+  --color-surface-deep: #0d1522;
   --color-primary: #00b4ff;
   --color-secondary: #4fd1c5;
   --color-accent: #9b7bff;
