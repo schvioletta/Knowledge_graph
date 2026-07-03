@@ -1,25 +1,12 @@
 @import "tailwindcss";
 
-/* Тёмная палитра проекта (предыдущая цветовая версия) — структура/эффекты
-   остальных стилей не меняются, меняются только значения токенов. */
-:root {
-  --color-bg: linear-gradient(180deg,
-  #060b12 0%,
-  #060b12 20%,
-  #004c97 55%,
-  #0077c8 100%
-);
-  --color-bg2: #0d1522;
-  --color-border-rgb: 255, 255, 255;
-}
-
 @theme {
   --color-bg: #060b12;
   --color-surface: #004c97;
   /* Более тёмный тёмно-синий вариант surface — та же гамма, что и фон графа
      (PALETTE.surface в constants.js), используется там, где нужен более
      тёмный тон (поле поиска, плашки примеров вопросов), а не средний #004c97. */
-  --color-surface-deep: #0d1522;
+  --color-surface-deep: #ccebf5 20%;
   --color-primary: #00b4ff;
   --color-secondary: #4fd1c5;
   --color-accent: #9b7bff;
@@ -30,6 +17,17 @@
 
 :root {
   color-scheme: dark;
+  /* Фирменный градиент фона сайта — раньше применялся через переменную
+     --color-bg, но Tailwind-утилита bg-bg (background-color) не может
+     отрисовать градиент (background-color не принимает linear-gradient),
+     поэтому визуально градиент никогда не показывался. Держим его отдельно
+     и применяем через background (шорткат) там, где это реально работает. */
+  --gradient-bg: linear-gradient(180deg,
+    #060b12 0%,
+    #060b12 20%,
+    #004c97 55%,
+    #0077c8 100%
+  );
 }
 
 html {
@@ -38,7 +36,10 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  /* fixed — градиент привязан к вьюпорту, а не к высоте всего документа
+     (страница намного выше экрана), иначе переходы цвета растянулись бы
+     на тысячи пикселей и почти вся страница выглядела бы одним плоским тоном. */
+  background: var(--gradient-bg) fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
