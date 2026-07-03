@@ -1,8 +1,7 @@
-import { MessageSquare, Network, FileSearch, Loader2, FileText, Link as LinkIcon } from "lucide-react";
+import { Network, FileSearch, Loader2, FileText, Link as LinkIcon } from "lucide-react";
 import DetailPanel from "./DetailPanel";
 
 const TABS = [
-  { id: "answer", label: "Текстовый ответ", icon: MessageSquare },
   { id: "documents", label: "По документам", icon: FileSearch },
   { id: "schema", label: "Схема графа", icon: Network },
 ];
@@ -75,8 +74,6 @@ function RagAnswer({ loading, result }) {
 export default function ResultsPanel({
   activeTab,
   onTabChange,
-  answer,
-  onResetHighlight,
   ragResult,
   ragLoading,
   node,
@@ -109,30 +106,6 @@ export default function ResultsPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "answer" && (
-          answer ? (
-            <div className="flex flex-col gap-2 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Ответ по графу
-              </div>
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
-                {answer}
-              </pre>
-              <button
-                type="button"
-                onClick={onResetHighlight}
-                className="mt-1 self-start rounded border border-ink/20 px-2.5 py-1 text-xs text-ink/60 transition hover:text-ink"
-              >
-                Сбросить подсветку
-              </button>
-            </div>
-          ) : (
-            <div className="flex h-full items-center p-5 text-sm text-ink/50">
-              Задайте вопрос в строке поиска — ответ появится здесь.
-            </div>
-          )
-        )}
-
         {activeTab === "documents" && <RagAnswer loading={ragLoading} result={ragResult} />}
 
         {activeTab === "schema" && (

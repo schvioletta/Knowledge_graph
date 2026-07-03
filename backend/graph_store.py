@@ -155,10 +155,16 @@ class GraphStore:
         for src, tgt, data in self.g.out_edges(exp_id, data=True):
             rel = data.get("type")
             target_node = {"id": tgt, **self.g.nodes[tgt]}
+            contexts = data.get("source_contexts")
+            if contexts:
+                target_node["relation_contexts"] = contexts
             detail.setdefault(rel, []).append(target_node)
         for src, tgt, data in self.g.in_edges(exp_id, data=True):
             rel = data.get("type")
             source_node = {"id": src, **self.g.nodes[src]}
+            contexts = data.get("source_contexts")
+            if contexts:
+                source_node["relation_contexts"] = contexts
             detail.setdefault(f"incoming::{rel}", []).append(source_node)
         return detail
 

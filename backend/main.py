@@ -6,8 +6,15 @@ import uuid
 from dataclasses import asdict
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from backend.graph_store import GraphStore
@@ -18,13 +25,20 @@ from backend.rag.qa import answer_question
 from backend.rag.store import DocumentStore
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
+from backend.source_files import RAW_ROOT, resolve_source_file, source_file_meta
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # GRAPH_DATA_PATH переключает бэкенд на граф, построенный из реальных документов
 # (backend/nlp_pipeline/pipeline.py -> data/real_graph.json), не трогая синтетический демо-датасет.
-DATA_PATH = Path(os.getenv("GRAPH_DATA_PATH") or (Path(__file__).resolve().parent.parent / "data" / "sample_graph.json"))
+# Берётся из .env или окружения; относительные пути — от корня репозитория.
+_graph_env = os.getenv("GRAPH_DATA_PATH")
+if _graph_env:
+    _graph_path = Path(_graph_env)
+    DATA_PATH = _graph_path if _graph_path.is_absolute() else PROJECT_ROOT / _graph_path
+else:
+    DATA_PATH = PROJECT_ROOT / "data" / "sample_graph.json"
 
 # GRAPH_BACKEND=neo4j переключает хранилище на Neo4j (Cypher-обход связей вместо
 # самописных Python-запросов поверх NetworkX) — граф должен быть предварительно
@@ -68,6 +82,7 @@ def load_graph() -> None:
 
     if DATA_PATH.exists():
         gs.load(DATA_PATH)
+        print(f"[backend] граф загружен: {DATA_PATH} ({gs.g.number_of_nodes()} узлов, {gs.g.number_of_edges()} рёбер)")
     elif not os.getenv("GRAPH_DATA_PATH"):
         gs2 = build_sample_graph()
         gs2.save(DATA_PATH)
@@ -177,3 +192,15 @@ def list_documents():
 @app.get("/api/rag/ask")
 def rag_ask(q: str = Query(..., min_length=1)):
     return answer_question(rag_store, q)
+
+
+@app.get("/api/sources/file")
+def open_source_file(name: str = Query(..., min_length=1)):
+    """Отдаёт исходный документ из data/raw (поиск по имени файла, без path traversal)."""
+    path = resolve_source_file(name)
+    if path is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Файл {name!r} не найден в {RAW_ROOT}. Положите документ в data/raw/ или задайте RAW_DATA_PATH.",
+        )
+    return FileResponse(path, filename=path.name, media_type=None)

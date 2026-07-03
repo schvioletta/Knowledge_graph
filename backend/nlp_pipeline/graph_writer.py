@@ -26,6 +26,8 @@ from pathlib import Path
 from typing import Any
 
 from backend.graph_store import GraphStore
+from backend.nlp_pipeline.chunking import Chunk
+from backend.nlp_pipeline.llm_log import MAX_CONTEXTS_PER_NODE, truncate_snippet
 from backend.nlp_pipeline.ner_extract import ExtractionResult
 from backend.nlp_pipeline.resolve import AliasTable, resolve_entity
 from backend.nlp_pipeline.validate import validate_entity_attrs, validate_relation
@@ -37,7 +39,37 @@ _NUMERIC_HINT_SUFFIXES = (
 
 # Технические ключи узла, которые не являются «фактами» из документа и не должны
 # версионироваться через _apply_attrs_with_history (у них своя логика обновления).
-_NON_FACT_KEYS = frozenset({"source_file", "sources", "confidence", "date"})
+_NON_FACT_KEYS = frozenset({"source_file", "sources", "confidence", "date", "source_contexts"})
+
+
+def _context_key(ctx: dict[str, Any]) -> tuple[str, int]:
+    return str(ctx.get("source_file", "")), int(ctx.get("chunk_index", 0))
+
+
+def _append_source_context(container: dict[str, Any], ctx: dict[str, Any], label: str = "node") -> None:
+    contexts: list[dict[str, Any]] = container.setdefault("source_contexts", [])
+    key = _context_key(ctx)
+    if any(_context_key(c) == key for c in contexts):
+        return
+    if len(contexts) >= MAX_CONTEXTS_PER_NODE:
+        print(
+            f"[graph_writer] source_contexts limit ({MAX_CONTEXTS_PER_NODE}) для {label} "
+            f"({ctx.get('source_file')}, chunk {ctx.get('chunk_index')})",
+            flush=True,
+        )
+        return
+    contexts.append(ctx)
+
+
+def _make_source_context(chunk: Chunk, meta, chunk_index: int) -> dict[str, Any]:
+    return {
+        "source_file": meta.source_file,
+        "chunk_index": chunk_index,
+        "locations": list(chunk.locations),
+        "language": chunk.language,
+        "kind": chunk.kind,
+        "text": truncate_snippet(chunk.text, 500),
+    }
 
 
 def _apply_attrs_with_history(node: dict[str, Any], attrs: dict[str, Any], source_file: str) -> None:
@@ -98,7 +130,12 @@ class GraphWriter:
         self.alias = alias_table
         self.stats = {"entities_created": 0, "entities_reused": 0, "relations": 0, "validation_warnings": 0, "needs_review": 0}
 
-    def write_document(self, path: str, meta, result_per_chunk: list[ExtractionResult]) -> str:
+    def write_document(
+        self,
+        path: str,
+        meta,
+        chunk_results: list[tuple[Chunk, ExtractionResult]],
+    ) -> str:
         pub_id = f"pub_{Path(path).stem}_{_stable_id_num(path) % 10_000:04d}"
         title = Path(path).stem.replace("_", " ")
         self.gs.add_entity(Entity(
@@ -106,11 +143,14 @@ class GraphWriter:
             attrs={"source_file": meta.source_file, "date": meta.modified, "confidence": "не проверено"},
         ))
 
-        for result in result_per_chunk:
+        for chunk_index, (chunk, result) in enumerate(chunk_results, start=1):
+            source_context = _make_source_context(chunk, meta, chunk_index)
             tmp_to_real: dict[str, str] = {"pub": pub_id}
 
             for e in result.entities:
-                real_id = self._upsert_entity(e.type.value, e.name, e.attrs, meta.source_file)
+                real_id = self._upsert_entity(
+                    e.type.value, e.name, e.attrs, meta.source_file, source_context=source_context,
+                )
                 tmp_to_real[e.tmp_id] = real_id
 
             for r in result.relations:
@@ -124,7 +164,7 @@ class GraphWriter:
                 if issues:
                     self.stats["validation_warnings"] += len(issues)
                     continue
-                self.gs.add_relation(Relation(source=src, target=tgt, type=r.type, attrs=r.attrs))
+                self._add_relation_with_context(src, tgt, r.type, r.attrs, source_context)
                 self.stats["relations"] += 1
 
                 if r.type == RelationType.PRODUCES_CONCLUSION:
@@ -132,7 +172,39 @@ class GraphWriter:
 
         return pub_id
 
-    def _upsert_entity(self, etype: str, name: str, attrs: dict[str, Any], source_file: str) -> str:
+    def _add_relation_with_context(
+        self,
+        src: str,
+        tgt: str,
+        rel_type: RelationType,
+        attrs: dict[str, Any],
+        source_context: dict[str, Any],
+    ) -> None:
+        key = rel_type.value
+        if self.gs.g.has_edge(src, tgt, key=key):
+            edge_data = self.gs.g.edges[src, tgt, key]
+            merged = dict(attrs)
+            for k, v in edge_data.items():
+                if k not in ("type",) and k not in merged:
+                    merged[k] = v
+            _append_source_context(merged, source_context, label=f"edge {src}->{tgt}")
+            for k, v in merged.items():
+                edge_data[k] = v
+            return
+
+        rel_attrs = dict(attrs)
+        _append_source_context(rel_attrs, source_context, label=f"edge {src}->{tgt}")
+        self.gs.add_relation(Relation(source=src, target=tgt, type=rel_type, attrs=rel_attrs))
+
+    def _upsert_entity(
+        self,
+        etype: str,
+        name: str,
+        attrs: dict[str, Any],
+        source_file: str,
+        *,
+        source_context: dict[str, Any],
+    ) -> str:
         existing_id = resolve_entity(self.gs, self.alias, etype, name)
         if existing_id:
             node = self.gs.g.nodes[existing_id]
@@ -141,6 +213,7 @@ class GraphWriter:
                 sources.append(source_file)
             node["sources"] = sources
             _apply_attrs_with_history(node, attrs, source_file)
+            _append_source_context(node, source_context, label=f"{etype}:{name}")
             node["confidence"] = infer_confidence(node, sources)
             self.stats["entities_reused"] += 1
             return existing_id
@@ -149,6 +222,7 @@ class GraphWriter:
         full_attrs = dict(attrs)
         full_attrs["source_file"] = source_file
         full_attrs["sources"] = [source_file]
+        full_attrs["source_contexts"] = [source_context]
         issues = validate_entity_attrs(EntityType(etype), full_attrs)
         self.stats["validation_warnings"] += len(issues)
         full_attrs.setdefault("date", "")

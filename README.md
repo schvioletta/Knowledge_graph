@@ -126,8 +126,12 @@ docx/pptx/pdf, включая OCR для сканов, RU и EN в одном д
   python -m backend.nlp_pipeline.pipeline data/raw/*.docx data/raw/*.pptx data/raw/*.pdf --full-document --out data/real_graph.json
 
   # смоук-тест: первые 20 файлов — быстро проверить, что пайплайн отрабатывает,
-  # прежде чем гонять LLM на всём корпусе
+  # прежде чем гонять LLM на всём корпусе. Файлы из data/graph_includes.json
+  # (и флаг --include) всегда включаются в прогон и не вытесняются --limit.
   python -m backend.nlp_pipeline.pipeline data/raw/**/* --limit 20 --out data/smoke_graph.json
+
+  # только 5 закреплённых статей из data/graph_includes.json
+  python -m backend.nlp_pipeline.pipeline --includes-only --out data/smoke_graph.json --force
 
   python -m backend.nlp_pipeline.eval data/golden   # precision/recall, если golden-набор размечен (см. eval.py)
 

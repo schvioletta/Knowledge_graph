@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import GraphView from "./components/GraphView";
+import GraphAnswer from "./components/GraphAnswer";
 import SearchBar from "./components/SearchBar";
 import SourcesPanel from "./components/SourcesPanel";
 import ResultsPanel from "./components/ResultsPanel";
@@ -42,7 +43,7 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [highlightIds, setHighlightIds] = useState(new Set());
-  const [answer, setAnswer] = useState("");
+  const [searchResult, setSearchResult] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [fitSignal, setFitSignal] = useState(0);
 
@@ -58,7 +59,7 @@ export default function App() {
 
   const [typeFilter, setTypeFilter] = useState(() => new Set(FILTERABLE_TYPES));
   const [filterOpen, setFilterOpen] = useState(true);
-  const [resultsTab, setResultsTab] = useState("answer");
+  const [resultsTab, setResultsTab] = useState("documents");
 
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -158,6 +159,16 @@ export default function App() {
     setDetail(d);
   };
 
+  const handleSelectPublication = async (pubId) => {
+    const node = nodesMap[pubId];
+    if (!node) return;
+    setHighlightIds((prev) => new Set([...prev, pubId]));
+    setSelectedNode({ id: pubId, type: node.type, name: node.name, attrs: node.attrs || {} });
+    setResultsTab("schema");
+    const d = await api.node(pubId);
+    setDetail(d);
+  };
+
   const handleExpand = async (nodeId) => {
     const vis = await api.neighbors(nodeId, 1);
     setNodesMap((prev) => mergeVis(prev, links, vis)[0]);
@@ -206,7 +217,7 @@ export default function App() {
       setNodesMap((prev) => mergeVis(prev, links, result.subgraph)[0]);
       setLinks((prev) => mergeVis(nodesMap, prev, result.subgraph)[1]);
       setHighlightIds(new Set(result.path_node_ids));
-      setAnswer(result.answer);
+      setSearchResult(result);
       setSelectedNode(null);
       setDetail(null);
       setFitSignal((s) => s + 1);
@@ -216,7 +227,9 @@ export default function App() {
     // Если в загруженных документах нашлось обоснованное подтверждение —
     // это самый надёжный ответ (с цитатами), показываем его в первую очередь.
     const ragOutcome = await ragPromise;
-    setResultsTab(ragOutcome?.grounded ? "documents" : "answer");
+    if (ragOutcome?.grounded) {
+      setResultsTab("documents");
+    }
   };
 
   const handleExampleSelect = (question) => {
@@ -276,8 +289,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Toolbar поиска — только строка поиска; ответ теперь живёт в правой
-            панели результатов (вкладка «Текстовый ответ»), не над input. */}
+        {/* Toolbar поиска; текстовый ответ — отдельной панелью над дашбордом графа. */}
         <div id="search-toolbar" className="border-b border-ink/10 bg-bg px-6 py-4">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
             <SearchBar onSearch={handleSearch} loading={searchLoading} />
@@ -292,8 +304,15 @@ export default function App() {
           </div>
         </div>
 
-        {/* Дашборд: фильтры (сворачиваемая панель) | граф | результаты */}
+        {/* Дашборд: ответ по графу (на всю ширину) → фильтры | граф | результаты */}
         <div className="mx-auto max-w-[1600px]">
+          <GraphAnswer
+            result={searchResult}
+            loading={searchLoading}
+            onResetHighlight={() => { setSearchResult(null); setHighlightIds(new Set()); }}
+            onSelectPublication={handleSelectPublication}
+          />
+
           <div
             className={`grid h-[640px] w-full ${
               filterOpen ? "lg:grid-cols-[280px_1fr_360px]" : "lg:grid-cols-[44px_1fr_360px]"
@@ -356,8 +375,6 @@ export default function App() {
               <ResultsPanel
                 activeTab={resultsTab}
                 onTabChange={setResultsTab}
-                answer={answer}
-                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
                 ragResult={ragResult}
                 ragLoading={ragLoading}
                 node={selectedNode}
@@ -394,8 +411,6 @@ export default function App() {
               <ResultsPanel
                 activeTab={resultsTab}
                 onTabChange={setResultsTab}
-                answer={answer}
-                onResetHighlight={() => { setAnswer(""); setHighlightIds(new Set()); }}
                 ragResult={ragResult}
                 ragLoading={ragLoading}
                 node={selectedNode}

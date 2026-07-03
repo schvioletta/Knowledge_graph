@@ -46,4 +46,11 @@ export const api = {
   },
 
   ragAsk: (q) => getJson(`/api/rag/ask?q=${encodeURIComponent(q)}`),
+
+  sourceFileUrl: (fileUrlOrName) => {
+    if (!fileUrlOrName) return null;
+    if (fileUrlOrName.startsWith("http")) return fileUrlOrName;
+    if (fileUrlOrName.startsWith("/api/")) return `${BASE}${fileUrlOrName}`;
+    return `${BASE}/api/sources/file?name=${encodeURIComponent(fileUrlOrName)}`;
+  },
 };

@@ -1,0 +1,82 @@
+{
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/52 Solid household and industrial waste paper 28-09-2021-rus.docx": {
+    "sha256": "4baaf64d1a2d69629f7bf9be0b6cd9e4b9961268b8e7d4fe468ded8222cb7a69",
+    "processed_at": "2026-07-04T01:22:31"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/55 Приложение. Текст статьи.docx": {
+    "sha256": "1e0e0c531de26e4cd86bef77445fe6d85ed78fe9f01fa134d87e13d4a2f68586",
+    "processed_at": "2026-07-04T01:23:36"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/9 статья (2).docx": {
+    "sha256": "4c52a424626c31ff44df0a5afb327574c8f5941afd0969c1f696520c91d52c87",
+    "processed_at": "2026-07-04T01:24:59"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx": {
+    "sha256": "aae623f88b63a9fc5e6bbf186cb46818b49c484ae10a4f674927ce601dfd091c",
+    "processed_at": "2026-07-04T01:25:34"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/13 Приложение. Статья.pdf": {
+    "sha256": "ad36c995cfe3e27966fbb9cea6014d71f5f59125301c0be180b0cb61dfe266b5",
+    "processed_at": "2026-07-04T01:26:24"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Вострикова Н.М.pdf": {
+    "sha256": "78dba7f3f49eae8bc814dc0fc2b20333ce207c3c06cc9b8c98e517269a5499d2",
+    "processed_at": "2026-07-04T01:05:43"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Вязовой О.Н.pdf": {
+    "sha256": "72c1a8e66ed1052b0c80ff9bcde5008ebfe43dc06e9a56f18786a7b72b826775",
+    "processed_at": "2026-07-04T01:05:51"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Луканина М.А.pdf": {
+    "sha256": "b5239baded97dfe346213559766a5fde2bcff374f29540f616fb79b65d8a453a",
+    "processed_at": "2026-07-04T01:06:01"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Новожилова О.С.pdf": {
+    "sha256": "56e1917f65d6206764496f55bac61bf60ca6950241073d2b2fcc15a5f394a9cb",
+    "processed_at": "2026-07-04T01:06:14"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Румянцев А.Е.pdf": {
+    "sha256": "f19c35504e720ac6461702fe811ac6e499bb9019a5c0a0661c381dc8ebcfdd8f",
+    "processed_at": "2026-07-04T01:06:29"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Федосеев А.В.pdf": {
+    "sha256": "77160d312eca2fe8b25a792971f49d6a149a5c7493ff22c290ac7e2ba16fa4db",
+    "processed_at": "2026-07-04T01:06:49"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/НДС Комсомольский.pdf": {
+    "sha256": "b4df78c0a40f58f2db1372c9e852652a4615ff9a33df4f64a9316177a1bd3e76",
+    "processed_at": "2026-07-04T01:07:04"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Переработка рудных образований океана - Цымбулов Л.Б. Институт Гипроникель-16-06-2024.pptx": {
+    "sha256": "28441e2787eafb55fc450913819167948e7f95fce0cb741f5e1e27c785f4a888",
+    "processed_at": "2026-07-04T01:07:35"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Преза Рудник 2025.pptx": {
+    "sha256": "32c26aff459f6825dca16160c5b123a754b97afba8300b6812ea8f1f848267d1",
+    "processed_at": "2026-07-04T01:07:50"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Презентация Измерение НДС Техсовет.pdf": {
+    "sha256": "8458fda9f51102cd762c622f3a4c3eba255dccdd1bdefdaf38654796d5190f5f",
+    "processed_at": "2026-07-04T01:08:11"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Презентация Тяпкина ПА.pptx": {
+    "sha256": "d53412319cb06e911b56c754eaa6192d6509887227e9685c5a9c481a2eb2cc42",
+    "processed_at": "2026-07-04T01:08:51"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Презентация для  научного совета.pptx": {
+    "sha256": "4c324c350399ee41bd18f5b9eb667b01e6e90a09506ee635ff6f6133bf793050",
+    "processed_at": "2026-07-04T01:10:03"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Прогнозирование_участков_концентрации_напряжений_в_массиве_горных.pptx": {
+    "sha256": "6e5770b56b3c27ee7761d647769108edfbbce23108b72cce5e8f4c8e3c4e6ceb",
+    "processed_at": "2026-07-04T01:10:22"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Техсовет по геомеханике,презентация Кулагин А.Д. рудоспуски.pdf": {
+    "sha256": "c4ec073a23d5ee3b7d11223211971dc13510eb9857d435f37bf7c0cc4cfa6f68",
+    "processed_at": "2026-07-04T01:10:58"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Трофимов А.В. Опыт создания блочных геомеханических моделей в ГГИС.pdf": {
+    "sha256": "f372e4fa51db86fbaff51045ccce4cc686262156092d36bcb00ea7ebcabcb7b3",
+    "processed_at": "2026-07-04T01:11:15"
+  }
+}

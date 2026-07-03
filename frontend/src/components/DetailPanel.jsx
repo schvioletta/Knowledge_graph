@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { TYPE_COLOR, TYPE_LABEL } from "../constants";
+import SourceContextBlock from "./SourceContextBlock";
 
 const RELATION_LABEL = {
   USES_MATERIAL: "Материал",
@@ -59,6 +60,7 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
   }
 
   const attrs = node.attrs || {};
+  const nodeContexts = attrs.source_contexts || detail?.source_contexts || [];
   const numericEntries = Object.entries(attrs).filter(([k]) => NUMERIC_LABELS[k]);
 
   return (
@@ -117,6 +119,10 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
         </div>
       )}
 
+      {nodeContexts.length > 0 && (
+        <SourceContextBlock contexts={nodeContexts} title="Фрагменты источника" />
+      )}
+
       {detail &&
         Object.entries(RELATION_LABEL).map(([key, label]) => {
           const items = detail[key];
@@ -124,9 +130,18 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
           return (
             <div key={key} className="flex flex-col gap-1">
               <div className="text-[11px] uppercase tracking-wide text-ink/50">{label}</div>
-              <ul className="list-disc pl-4 text-sm text-ink/80">
+              <ul className="list-none pl-0 text-sm text-ink/80">
                 {items.map((it) => (
-                  <li key={it.id}>{it.name}</li>
+                  <li key={it.id} className="mb-2">
+                    <span>{it.name}</span>
+                    {it.relation_contexts?.length > 0 && (
+                      <SourceContextBlock
+                        contexts={it.relation_contexts}
+                        title="Контекст связи"
+                        compact
+                      />
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>

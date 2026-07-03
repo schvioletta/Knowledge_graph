@@ -66,10 +66,57 @@ class Relation(BaseModel):
     attrs: dict[str, Any] = Field(default_factory=dict)
 
 
+class PublicationRef(BaseModel):
+    id: Optional[str] = None
+    name: str
+    source_file: str = ""
+    date: str = ""
+    file_available: bool = False
+    file_url: str = ""
+
+
+class SourceContext(BaseModel):
+    source_file: str
+    chunk_index: int
+    locations: list[str] = Field(default_factory=list)
+    language: str = ""
+    kind: str = ""
+    text: str = ""
+
+
+class RelationContextSummary(BaseModel):
+    relation_type: str
+    target_name: str
+    source_contexts: list[SourceContext] = Field(default_factory=list)
+
+
+class ExperimentSummary(BaseModel):
+    id: str
+    approximate: bool = False
+    relevance_score: Optional[float] = None
+    country: str = "?"
+    confidence: str = "?"
+    materials: list[str] = Field(default_factory=list)
+    processes: list[str] = Field(default_factory=list)
+    conditions: list[str] = Field(default_factory=list)
+    equipment: list[str] = Field(default_factory=list)
+    facilities: list[str] = Field(default_factory=list)
+    effect: str = ""
+    conclusions: list[str] = Field(default_factory=list)
+    publications: list[PublicationRef] = Field(default_factory=list)
+    team: list[str] = Field(default_factory=list)
+    source_contexts: list[SourceContext] = Field(default_factory=list)
+    relation_contexts: list[RelationContextSummary] = Field(default_factory=list)
+
+
 class SearchResult(BaseModel):
     answer: str
+    exact_match: bool = True
+    experiments: list[ExperimentSummary] = Field(default_factory=list)
+    publications: list[PublicationRef] = Field(default_factory=list)
     matched_experiment_ids: list[str]
     path_node_ids: list[str]
     subgraph: dict[str, Any]
     gaps_mentioned: list[str] = Field(default_factory=list)
     contradictions: list[dict[str, Any]] = Field(default_factory=list)
+    detected_entities: dict[str, Any] = Field(default_factory=dict)

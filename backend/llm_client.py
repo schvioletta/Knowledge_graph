@@ -49,3 +49,18 @@ def complete(prompt: str, system: Optional[str] = None, temperature: float = 0.0
 
 def is_configured() -> bool:
     return bool(os.getenv("YANDEX_API_KEY") and os.getenv("YANDEX_FOLDER_ID"))
+
+
+def runtime_ready() -> tuple[bool, str]:
+    """Проверка, что LLM реально можно вызвать (ключи + зависимости)."""
+    if not is_configured():
+        return False, "нет YANDEX_API_KEY/YANDEX_FOLDER_ID в окружении"
+    try:
+        import openai  # noqa: F401
+    except ImportError:
+        return (
+            False,
+            "пакет openai не установлен в текущем Python "
+            "(pip install openai или запуск через .venv/bin/python)",
+        )
+    return True, ""
