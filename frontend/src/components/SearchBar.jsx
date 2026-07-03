@@ -23,7 +23,7 @@ export default function SearchBar({ onSearch, loading }) {
         <button
           type="submit"
           disabled={loading}
-          className="shrink-0 rounded bg-primary px-4 py-1.5 text-sm font-semibold text-surface transition hover:bg-navy disabled:opacity-60"
+          className="shrink-0 rounded bg-primary px-4 py-1.5 text-sm font-semibold text-bg transition hover:brightness-110 disabled:opacity-60"
         >
           {loading ? "Поиск…" : "Спросить"}
         </button>

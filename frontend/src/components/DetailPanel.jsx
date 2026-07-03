@@ -78,7 +78,7 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
       <div className="flex flex-wrap gap-1.5">
         {attrs.date && <Badge>📅 {attrs.date}</Badge>}
         {attrs.country && (
-          <Badge className={attrs.country === "RU" ? "border-primary/40 text-primary" : "border-navy/40 text-navy"}>
+          <Badge className={attrs.country === "RU" ? "border-primary/40 text-primary" : "border-accent/40 text-accent"}>
             {attrs.country === "RU" ? "РФ" : "Мир"}
           </Badge>
         )}

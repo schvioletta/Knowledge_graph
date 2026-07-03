@@ -1,11 +1,10 @@
-// Строгая палитра проекта — только эти 5 цветов (см. :root в index.css).
-// Никаких других hex/rgba вне производных от них.
+// Тёмная палитра проекта (предыдущая цветовая версия) — см. :root в index.css.
 export const PALETTE = {
-  primary: "#0077c8", // --asw-blue
-  secondary: "#016cb6", // --aws-secondary-600
-  navy: "#004c97", // --aws-navy-blue
-  surface: "#ebedf1", // --aws-gray-200
-  ink: "#1a1b25", // --aws-gray-60
+  primary: "#00b4ff",
+  secondary: "#4fd1c5",
+  accent: "#9b7bff",
+  surface: "#0d1522",
+  ink: "#e2e8f0",
 };
 
 export const TYPE_COLOR = {
@@ -13,9 +12,9 @@ export const TYPE_COLOR = {
   process: PALETTE.secondary,
   experiment: PALETTE.primary,
   property: PALETTE.secondary,
-  condition: PALETTE.navy,
-  equipment: PALETTE.navy,
-  facility: PALETTE.navy,
+  condition: PALETTE.accent,
+  equipment: PALETTE.accent,
+  facility: PALETTE.accent,
   team: PALETTE.secondary,
   expert: PALETTE.ink,
   topic: PALETTE.ink,

@@ -185,38 +185,38 @@ export default function App() {
   const resetTypes = () => setTypeFilter(new Set(FILTERABLE_TYPES));
 
   return (
-    <div id="top" className="min-h-screen bg-surface text-ink">
+    <div id="top" className="min-h-screen bg-bg text-ink">
       <NavBar />
 
       <section id="workbench" className="border-b border-ink/10">
         {/* Masthead — структурный навигационный блок, не декоративный hero */}
-        <div className="bg-navy">
+        <div className="bg-bg">
           <div className="mx-auto max-w-[1600px] px-6 py-12 md:py-16">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
             >
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-surface/70">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/70">
                 Knowledge Graph · R&D
               </span>
-              <h1 className="mt-3 max-w-2xl text-3xl font-bold leading-[1.15] text-surface md:text-4xl lg:text-5xl">
+              <h1 className="mt-3 max-w-2xl text-3xl font-bold leading-[1.15] text-ink md:text-4xl lg:text-5xl">
                 Knowledge Graph для R&D горно-металлургической отрасли
               </h1>
-              <p className="mt-3 max-w-xl text-sm text-surface/70 md:text-base">
+              <p className="mt-3 max-w-xl text-sm text-ink/70 md:text-base">
                 Единая интеллектуальная карта исследований, экспериментов, публикаций,
                 технологий и экспертов.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href="#search-toolbar"
-                  className="rounded bg-primary px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-secondary"
+                  className="rounded bg-primary px-5 py-2.5 text-sm font-semibold text-bg transition hover:brightness-110"
                 >
                   Попробовать поиск
                 </a>
                 <a
                   href="#examples"
-                  className="rounded border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:border-surface/60"
+                  className="rounded border border-ink/30 px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-ink/60"
                 >
                   Посмотреть демо
                 </a>
@@ -226,7 +226,7 @@ export default function App() {
         </div>
 
         {/* Toolbar поиска */}
-        <div id="search-toolbar" className="border-b border-ink/10 bg-surface px-6 py-4">
+        <div id="search-toolbar" className="border-b border-ink/10 bg-bg px-6 py-4">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-3">
             {answer && (
               <Card className="p-4">
