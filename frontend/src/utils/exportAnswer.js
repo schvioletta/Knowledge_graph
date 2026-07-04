@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const BASE = import.meta.env.VITE_API_BASE ?? "";
 
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -23,6 +23,7 @@ function safeFilename(question) {
 const EXPAND_LLM_EXPORT = {
   ollama: "Qwen (локально)",
   gigachat: "GigaChat (облако)",
+  yandex: "Alice (облако)",
 };
 
 export function exportAsJson({ question, result }) {

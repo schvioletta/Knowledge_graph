@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -206,6 +207,10 @@ def _empty_graph() -> dict[str, Any]:
     }
 
 
+def _skip_chunk_ner() -> bool:
+    return os.getenv("RAG_SKIP_CHUNK_NER", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def build_internal_graph(
     hits: list[dict[str, Any]],
     store: Any | None = None,
@@ -217,7 +222,8 @@ def build_internal_graph(
     gs = GraphStore()
     alias = AliasTable(":memory:")
     writer = RagChunkGraphWriter(gs, alias)
-    build = ChunkGraphBuild(gs=gs, writer=writer, llm_skipped=not is_ner_configured())
+    skip_ner = _skip_chunk_ner() or not is_ner_configured()
+    build = ChunkGraphBuild(gs=gs, writer=writer, llm_skipped=skip_ner)
 
     by_doc: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for hit in hits:
@@ -236,6 +242,9 @@ def build_internal_graph(
             text = chunk.text
             if not text.strip():
                 continue
+            build.chunks_processed += 1
+            if skip_ner:
+                continue
             cached_ner = getattr(chunk, "ner", None)
             result, ner_blob, from_cache = resolve_chunk_ner(text, cached_ner)
             if from_cache:
@@ -245,7 +254,6 @@ def build_internal_graph(
             if ner_blob and store is not None:
                 store.persist_chunk_ner(doc_id, chunk.id, ner_blob)
             results.append(result)
-            build.chunks_processed += 1
 
         if results:
             writer.write_chunk_results(pub_id, source_name, results)

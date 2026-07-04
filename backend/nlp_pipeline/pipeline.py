@@ -152,6 +152,10 @@ def main() -> None:
                          help="Максимум символов на секцию (аннотация/методы/результаты/заключение)")
     args = parser.parse_args()
 
+    from backend.llm_client import log_llm_startup
+
+    log_llm_startup()
+
     run_t0 = time.time()
 
     _log("=== Этап 0: отбор файлов ===")

@@ -435,16 +435,19 @@ class Neo4jDocumentStore:
         for row in rows:
             node = row["n"]
             doc_id = node["id"]
-            abstract_chunks_raw = node.get("abstract_rag_chunks") or node.get("rag_chunks")
-            if not abstract_chunks_raw:
-                continue
-            props = {
+            props: dict[str, Any] = {
                 "attached": False,
                 "attach_source": "",
-                "index_mode": "abstract",
-                "rag_chunks": abstract_chunks_raw,
-                "num_chunks": len(json.loads(abstract_chunks_raw)),
             }
+            # Уже развёрнутые в full документы не сбрасываем — иначе каждый запрос
+            # заново читает файл с диска и пересчитывает эмбеддинги.
+            if node.get("index_mode") != "full":
+                abstract_chunks_raw = node.get("abstract_rag_chunks") or node.get("rag_chunks")
+                if not abstract_chunks_raw:
+                    continue
+                props["index_mode"] = "abstract"
+                props["rag_chunks"] = abstract_chunks_raw
+                props["num_chunks"] = len(json.loads(abstract_chunks_raw))
             self._update_node(doc_id, props)
             detached.append(self._meta_from_node({**dict(node), **props}))
         return detached
@@ -453,26 +456,27 @@ class Neo4jDocumentStore:
         node = self._get_node(doc_id)
         if not node or node.get("source_type") != "corpus":
             return None
+
+        if node.get("index_mode") == "full" and node.get("rag_chunks"):
+            props = {
+                "attached": True,
+                "attach_source": "auto",
+            }
+            self._update_node(doc_id, props)
+            return self._meta_from_node({**dict(node), **props})
+
         source_path = node.get("source_path")
         if not source_path or not Path(source_path).exists():
             return None
 
         blocks, _ = load_document(source_path)
-        text_chunks = chunk_blocks(rag_activate_blocks(source_path, blocks))
+        activate_blocks = rag_activate_blocks(source_path, blocks)
+        text_chunks = chunk_blocks(activate_blocks)
         if not text_chunks:
             return None
 
         vecs = self._embed([c.text for c in text_chunks])
-        chunk_records = [
-            {
-                "id": f"{doc_id}_{i}",
-                "text": c.text,
-                "location": ", ".join(c.locations),
-                "language": c.language,
-                "embedding": vecs[i].tolist(),
-            }
-            for i, c in enumerate(text_chunks)
-        ]
+        chunk_records = self._chunk_records_from_blocks(doc_id, activate_blocks, vecs)
         chunk_records = self._maybe_precompute_ner(chunk_records)
         abstract_chunks = node.get("abstract_rag_chunks") or node.get("rag_chunks", "[]")
 
@@ -631,6 +635,25 @@ class Neo4jDocumentStore:
             )
             metas = [self._meta_from_node(r["n"]) for r in rows]
         return sorted(metas, key=lambda d: d.added_at, reverse=True)
+
+    def list_corpus_documents(self) -> list[DocumentMeta]:
+        """Все документы корпуса (index_corpus), включая detached abstract."""
+        with self.driver.session() as s:
+            rows = s.run(
+                "MATCH (n:Entity {type: 'publication', source_type: 'corpus'}) RETURN n"
+            )
+            metas = [self._meta_from_node(r["n"]) for r in rows]
+        return sorted(metas, key=lambda d: d.source_path)
+
+    def remove_corpus_document(self, doc_id: str) -> bool:
+        """Полностью удалить узел корпусного документа из Neo4j (не только detach)."""
+        with self.driver.session() as s:
+            result = s.run(
+                "MATCH (n:Entity {id: $id, type: 'publication', source_type: 'corpus'}) "
+                "DETACH DELETE n RETURN count(n) AS c",
+                id=doc_id,
+            ).single()
+        return bool(result and result["c"])
 
     def delete_document(self, doc_id: str) -> bool:
         node = self._get_node(doc_id)

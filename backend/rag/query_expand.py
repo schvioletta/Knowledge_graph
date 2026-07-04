@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -36,6 +37,10 @@ def _normalize(text: str) -> str:
     return " ".join(text.split()).strip().lower()
 
 
+def _skip_query_expand() -> bool:
+    return os.getenv("RAG_SKIP_QUERY_EXPAND", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def expand_query(question: str, max_variants: int = _DEFAULT_MAX) -> dict[str, Any]:
     """Возвращает {original, expansions, all_queries, expanded, expand_llm}."""
     original = question.strip()
@@ -44,7 +49,7 @@ def expand_query(question: str, max_variants: int = _DEFAULT_MAX) -> dict[str, A
 
     expansions: list[str] = []
     expand_llm = None
-    if is_query_expand_available():
+    if not _skip_query_expand() and is_query_expand_available():
         prompt = f"Исходный вопрос:\n{original}\n\nДай {max_variants} перефразировки."
         raw, source = complete_query_expand(prompt, system=_SYSTEM_PROMPT, temperature=0.2)
         if raw:

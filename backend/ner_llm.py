@@ -73,7 +73,7 @@ def _cache_key(prompt: str, system: Optional[str], temperature: float) -> str:
     temp = max(temperature, 1e-6)
     backend = "ollama" if is_ollama_configured() else llm_backend()
     model = _ollama_model() if backend == "ollama" else (
-        os.getenv("YANDEX_MODEL", "yandexgpt-5-pro")
+        os.getenv("YANDEX_MODEL", "aliceai-llm-flash")
         if backend == "yandex"
         else os.getenv("GIGACHAT_MODEL", "GigaChat")
     )

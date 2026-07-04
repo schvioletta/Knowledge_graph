@@ -34,6 +34,11 @@ def collect_files(raw_root: Path) -> list[Path]:
     )
 
 
+def _progress_label(current: int, total: int) -> str:
+    remaining = total - current
+    return f"[{current}/{total}] (осталось {remaining})"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Индексация корпуса для RAG (полный текст + метаданные)")
     parser.add_argument(
@@ -52,6 +57,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--limit", type=int, default=0, help="Макс. число файлов (0 = все, только без явного списка files)")
     args = parser.parse_args(argv)
+
+    from backend.llm_client import log_llm_startup
+
+    log_llm_startup()
 
     if args.yandex:
         os.environ["INDEX_USE_YANDEX"] = "1"
@@ -80,16 +89,20 @@ def main(argv: list[str] | None = None) -> int:
         print("Файлы для индексации не заданы")
         return 0
 
+    total = len(files)
+    print(f"Индексация: {total} файл(ов)")
+
     manifest = ProcessedManifest(args.manifest)
     store = Neo4jDocumentStore()
 
     indexed = skipped = errors = 0
     try:
-        for path in files:
+        for i, path in enumerate(files, start=1):
+            tag = _progress_label(i, total)
             rel = str(path.resolve())
             if not args.force and manifest.is_processed(rel):
                 skipped += 1
-                print(f"  skip  {path.name}")
+                print(f"{tag} skip  {path.name}")
                 continue
             try:
                 blocks, _ = load_document(path)
@@ -99,19 +112,23 @@ def main(argv: list[str] | None = None) -> int:
                 _meta, is_dup = store.index_document(path, metadata, blocks, fhash, force=args.force)
                 if is_dup and not args.force:
                     skipped += 1
-                    print(f"  skip  {path.name} (уже в Neo4j)")
+                    print(f"{tag} skip  {path.name} (уже в Neo4j)")
                 else:
                     indexed += 1
-                    print(f"  ok    {path.name} → {_meta.id} ({_meta.num_chunks} chunks)")
+                    print(f"{tag} ok    {path.name} → {_meta.id} ({_meta.num_chunks} abstract chunks)")
                 manifest.mark_processed(rel)
             except Exception as e:
                 errors += 1
-                print(f"  ERR   {path.name}: {e}", file=sys.stderr)
+                print(f"{tag} ERR   {path.name}: {e}", file=sys.stderr)
         manifest.save()
     finally:
         store.close()
 
-    print(f"\nГотово: indexed={indexed}, skipped={skipped}, errors={errors}, total={len(files)}")
+    done = indexed + skipped + errors
+    print(
+        f"\nГотово: обработано {done}/{total} | "
+        f"indexed={indexed}, skipped={skipped}, errors={errors}"
+    )
     return 1 if errors else 0
 
 
