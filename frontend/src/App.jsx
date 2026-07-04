@@ -42,6 +42,11 @@ function loadHistory() {
   }
 }
 
+// crypto.randomUUID() недоступен по HTTP с IP (не secure context); fallback для истории.
+function newHistoryId() {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function mergeVis(nodesMap, links, vis) {
   const newNodesMap = { ...nodesMap };
   for (const n of vis.nodes) {
@@ -325,7 +330,7 @@ export default function App() {
             setRagResult(r);
             applyChunkGraphToState(r, setNodesMap, setLinks, setHighlightIds, setFitSignal);
             const entry = {
-              id: crypto.randomUUID(), question, timestamp: Date.now(),
+              id: newHistoryId(), question, timestamp: Date.now(),
               ragResult: r, thinkingSteps: [...steps],
             };
             setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
