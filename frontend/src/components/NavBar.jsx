@@ -1,11 +1,8 @@
 import { Share2 } from "lucide-react";
 
 const LINKS = [
-  { href: "#workbench", label: "Граф" },
-  { href: "/eval.html", label: "RAG Eval" },
   { href: "#architecture", label: "Архитектура" },
-  { href: "#capabilities", label: "Возможности" },
-  { href: "#status", label: "Статус ТЗ" },
+  { href: "#status", label: "Возможности" },
 ];
 
 export default function NavBar() {
