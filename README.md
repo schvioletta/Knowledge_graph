@@ -307,6 +307,45 @@ python -m backend.scripts.index_corpus --force \
 
 Без аргументов скрипт сканирует весь `data/raw/**`. С явным списком путей — только указанные файлы.
 
+### Оценка качества RAG-ответов
+
+Набор из 10 вопросов по тестовому корпусу — `data/rag_eval/questions.json`. Пакетный прогон через живой API:
+
+```bash
+# бэкенд должен быть запущен (make backend)
+python -m backend.scripts.rag_eval_batch
+```
+
+Результат для ручной разметки:
+
+- `data/rag_eval/annotation_template.json` — ответы системы + пустые поля `gold_answer`, `rating`, `retrieval_ok`, `factual_ok`, `citation_ok`, `notes`
+- `data/rag_eval/annotation_template.md` — то же в читаемом виде
+
+**Мини-интерфейс разметки** (бэкенд + frontend dev):
+
+```bash
+make backend    # :8000
+make frontend   # :5173
+# открыть http://localhost:5173/eval.html
+# v2 (сложные вопросы): http://localhost:5173/eval.html?v=2
+# авто-оценка v2:         http://localhost:5173/eval.html?v=2&source=auto
+```
+
+Сохранение пишет `data/rag_eval/annotations.json`. Кнопка «Скачать JSON» — локальная копия.
+
+Шкала `rating`: 1=неверно, 2=частично, 3=верно с пробелами, 4=верно, 5=эталон.
+
+**v2 (сложнее)** — перефразированные и составные вопросы:
+
+```bash
+python -m backend.scripts.rag_eval_batch \
+  --questions data/rag_eval/questions_v2.json \
+  --out data/rag_eval/annotation_template_v2.json
+python -m backend.scripts.rag_eval_score data/rag_eval/auto_eval_v2.json
+```
+
+Файлы: `questions_v2.json`, `annotation_template_v2.json`, `auto_eval_v2.json`.
+
 API:
 
 - `GET /api/rag/ask?q=...&auto_attach=true` — auto-attach + grounded ответ + **граф из citation-чанков**

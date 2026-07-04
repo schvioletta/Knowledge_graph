@@ -1,6 +1,7 @@
 """FastAPI-бэкенд knowledge graph поисково-аналитической системы."""
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from dataclasses import asdict
@@ -315,3 +316,73 @@ def rag_export_pdf(payload: RagExportRequest):
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="rag-answer.pdf"'},
     )
+
+
+# --- RAG eval: ручная разметка качества ответов ---
+
+RAG_EVAL_DIR = Path(__file__).resolve().parent.parent / "data" / "rag_eval"
+
+RAG_EVAL_SETS: dict[str, dict[str, Path]] = {
+    "1": {
+        "template": RAG_EVAL_DIR / "annotation_template.json",
+        "saved": RAG_EVAL_DIR / "annotations.json",
+        "auto": RAG_EVAL_DIR / "auto_eval.json",
+    },
+    "2": {
+        "template": RAG_EVAL_DIR / "annotation_template_v2.json",
+        "saved": RAG_EVAL_DIR / "annotations_v2.json",
+        "auto": RAG_EVAL_DIR / "auto_eval_v2.json",
+    },
+}
+
+
+def _resolve_rag_eval_path(version: str, source: str) -> tuple[Path, bool]:
+    """source: saved | template | auto. Возвращает (path, read_only)."""
+    if version not in RAG_EVAL_SETS:
+        raise HTTPException(status_code=400, detail=f"Неизвестная version={version!r}, допустимо: 1, 2")
+    if source not in ("saved", "template", "auto"):
+        raise HTTPException(status_code=400, detail=f"Неизвестный source={source!r}, допустимо: saved, template, auto")
+
+    paths = RAG_EVAL_SETS[version]
+    if source == "saved":
+        path = paths["saved"] if paths["saved"].is_file() else paths["template"]
+    elif source == "auto":
+        path = paths["auto"] if paths["auto"].is_file() else paths["template"]
+    else:
+        path = paths["template"]
+
+    if not path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Eval-набор v{version} не найден: {path.name} (запустите rag_eval_batch)",
+        )
+    read_only = source == "auto"
+    return path, read_only
+
+
+@app.get("/api/rag/eval")
+def rag_eval_get(
+    version: str = Query("1", pattern="^[12]$"),
+    source: str = Query("saved", pattern="^(saved|template|auto)$"),
+) -> dict[str, Any]:
+    path, read_only = _resolve_rag_eval_path(version, source)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    meta = data.setdefault("meta", {})
+    meta["eval_version"] = version
+    meta["eval_source"] = source
+    meta["loaded_file"] = path.name
+    meta["read_only"] = read_only
+    return data
+
+
+@app.put("/api/rag/eval")
+def rag_eval_put(
+    payload: dict[str, Any],
+    version: str = Query("1", pattern="^[12]$"),
+) -> dict[str, Any]:
+    if "items" not in payload or not isinstance(payload["items"], list):
+        raise HTTPException(status_code=400, detail="Ожидается объект с полем items[]")
+    out_path = RAG_EVAL_SETS[version]["saved"]
+    RAG_EVAL_DIR.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True, "path": str(out_path), "version": version}

@@ -2,6 +2,7 @@ import { Share2 } from "lucide-react";
 
 const LINKS = [
   { href: "#workbench", label: "Граф" },
+  { href: "/eval.html", label: "RAG Eval" },
   { href: "#capabilities", label: "Возможности" },
   { href: "#architecture", label: "Архитектура" },
   { href: "#status", label: "Статус ТЗ" },
