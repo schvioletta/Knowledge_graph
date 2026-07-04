@@ -287,7 +287,25 @@ python -m backend.scripts.index_corpus --force
 
 # Смоук на N файлах
 python -m backend.scripts.index_corpus --limit 5
+
+# Только выбранные файлы (тестовый корпус из data/raw/Статьи/)
+python -m backend.scripts.index_corpus \
+  "data/raw/Статьи/55 Приложение. Текст статьи.docx" \
+  "data/raw/Статьи/9 статья (2).docx" \
+  "data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx" \
+  "data/raw/Статьи/13 Приложение. Статья.pdf" \
+  "data/raw/Статьи/52 Solid household and industrial waste paper 28-09-2021-rus.docx"
+
+# Переиндексация тех же файлов принудительно — добавить --force перед путями
+python -m backend.scripts.index_corpus --force \
+  "data/raw/Статьи/55 Приложение. Текст статьи.docx" \
+  "data/raw/Статьи/9 статья (2).docx" \
+  "data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx" \
+  "data/raw/Статьи/13 Приложение. Статья.pdf" \
+  "data/raw/Статьи/52 Solid household and industrial waste paper 28-09-2021-rus.docx"
 ```
+
+Без аргументов скрипт сканирует весь `data/raw/**`. С явным списком путей — только указанные файлы.
 
 API:
 
