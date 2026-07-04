@@ -295,9 +295,13 @@ python -m backend.scripts.index_corpus \
   "data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx" \
   "data/raw/Статьи/13 Приложение. Статья.pdf" \
   "data/raw/Статьи/52 Solid household and industrial waste paper 28-09-2021-rus.docx"
+  
+# Только выбранные файлы (тестовый корпус из data/raw/Обзоры/)
+python3 -m backend.scripts.index_corpus \
+  "data/raw/Обзоры/Электроэкстракция никеля. Влияние состава электролита.docx"
 
 # Переиндексация тех же файлов принудительно — добавить --force перед путями
-python -m backend.scripts.index_corpus --force \
+python3 -m backend.scripts.index_corpus --force \
   "data/raw/Статьи/55 Приложение. Текст статьи.docx" \
   "data/raw/Статьи/9 статья (2).docx" \
   "data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx" \

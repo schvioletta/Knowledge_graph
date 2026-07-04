@@ -38,6 +38,15 @@ export function exportAsJson({ question, result }) {
     chunk_graph_stats: result.chunk_graph_stats,
     experiment_chains: result.experiment_chains,
     citations: result.citations,
+    external_sources: result.external
+      ? {
+          keywords: result.external.keywords,
+          query: result.external.query,
+          scholar: result.external.scholar,
+          patents: result.external.patents,
+          message: result.external.message,
+        }
+      : null,
     exported_at: new Date().toISOString(),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -91,12 +100,39 @@ export function exportAsMarkdown({ question, result }) {
     "",
   );
   if (result.citations?.length) {
-    lines.push("## Источники", "");
+    lines.push("## Источники", "", "### Внутренняя база знаний (RAG / документы)", "");
     for (const c of result.citations) {
       const score = c.score != null ? ` _(сходство ${c.score})_` : "";
       lines.push(`${c.index}. **${c.title}** — ${c.location}${score}`);
       if (c.snippet) lines.push(`   > ${c.snippet.replace(/\n/g, " ")}`);
       lines.push("");
+    }
+  }
+  const ext = result.external;
+  if (ext?.enabled) {
+    const extBlock = (heading, items, prefix) => {
+      if (!items?.length) return;
+      lines.push(`### ${heading}`, "");
+      items.forEach((it, i) => {
+        const meta = [(it.authors || []).join(", "), it.year, it.venue].filter(Boolean).join(" · ");
+        const rel = typeof it.relevance === "number" ? ` _(релевантность ${it.relevance})_` : "";
+        lines.push(`${prefix}${i + 1}. **${it.title || "(без названия)"}**${rel}`);
+        if (meta) lines.push(`   ${meta}`);
+        if (it.snippet) lines.push(`   > ${it.snippet.replace(/\n/g, " ")}`);
+        if (it.url) lines.push(`   ${it.url}`);
+        if (it.matched_keywords?.length) lines.push(`   _по словам:_ ${it.matched_keywords.join(", ")}`);
+        lines.push("");
+      });
+    };
+    extBlock("Google Scholar — научные публикации", ext.scholar, "S");
+    extBlock("Google Patents — патенты", ext.patents, "P");
+    if (!(ext.scholar?.length || ext.patents?.length)) {
+      lines.push(
+        "### Внешние источники",
+        "",
+        ext.message || "По данным ключевым словам релевантные публикации и патенты не найдены",
+        "",
+      );
     }
   }
   const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });

@@ -76,6 +76,8 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
       <h3 className="text-base font-semibold text-ink">{node.name}</h3>
 
       <div className="flex flex-wrap gap-1.5">
+        {attrs.origin === "scholar" && <Badge className="border-secondary/40 text-secondary">Google Scholar</Badge>}
+        {attrs.origin === "patent" && <Badge className="border-accent/40 text-accent">Google Patents</Badge>}
         {attrs.date && <Badge>📅 {attrs.date}</Badge>}
         {attrs.country && (
           <Badge className={attrs.country === "RU" ? "border-primary/40 text-primary" : "border-accent/40 text-accent"}>
@@ -83,7 +85,44 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
           </Badge>
         )}
         {attrs.confidence && <Badge>достоверность: {attrs.confidence}</Badge>}
+        {typeof attrs.relevance === "number" && <Badge>релевантность: {attrs.relevance.toFixed(2)}</Badge>}
       </div>
+
+      {attrs.origin && (
+        <div className="flex flex-col gap-1.5 rounded border border-ink/15 bg-surface px-2.5 py-2 text-xs">
+          {Array.isArray(attrs.authors) && attrs.authors.length > 0 && (
+            <div className="text-ink/70">
+              <span className="text-ink/45">Авторы: </span>
+              {attrs.authors.join(", ")}
+            </div>
+          )}
+          {attrs.venue && (
+            <div className="text-ink/70">
+              <span className="text-ink/45">{attrs.origin === "patent" ? "Номер патента: " : "Журнал/конференция: "}</span>
+              {attrs.venue}
+            </div>
+          )}
+          {attrs.snippet && <p className="text-ink/55">{attrs.snippet}</p>}
+          {Array.isArray(attrs.matched_keywords) && attrs.matched_keywords.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-ink/35">по словам:</span>
+              {attrs.matched_keywords.map((k) => (
+                <span key={k} className="rounded bg-primary/10 px-1 py-0.5 text-[10px] text-primary/80">{k}</span>
+              ))}
+            </div>
+          )}
+          {attrs.url && (
+            <a
+              href={attrs.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              Открыть оригинал ↗
+            </a>
+          )}
+        </div>
+      )}
 
       {attrs.effect && <div className="text-sm font-medium text-secondary">Эффект: {attrs.effect}</div>}
 

@@ -6,6 +6,7 @@ const STAGE_LABEL = {
   discover: "Подбор документов",
   retrieve: "Отбор фрагментов",
   entities: "Извлечение сущностей",
+  external: "Внешний поиск",
   synthesize: "Синтез ответа",
 };
 

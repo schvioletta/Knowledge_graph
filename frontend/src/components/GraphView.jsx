@@ -73,6 +73,14 @@ function traceShapePath(ctx, shape, x, y, r) {
   }
 }
 
+// Внешние публикации (найденные в Google Scholar / Google Patents) — узлы типа
+// publication с attrs.origin. Помечаем их на канве цветом контура и угловым
+// бейджем с буквой, чтобы отличать от загруженных пользователем публикаций.
+const ORIGIN_STYLE = {
+  scholar: { color: PALETTE.secondary, letter: "S" },
+  patent: { color: PALETTE.accent, letter: "P" },
+};
+
 export default function GraphView({
   graphData,
   highlightNodeIds,
@@ -134,7 +142,10 @@ export default function GraphView({
       // доли пикселя — это ухудшает читаемость, а не про запрещённый glow.
       const minScreenRadius = 2.6 / globalScale;
       const radius = Math.max(minScreenRadius, Math.sqrt(node.degree || 1) * 2.2);
-      const color = TYPE_COLOR[node.type] || PALETTE.ink;
+      // Внешние публикации перекрашиваем в цвет источника (Scholar/Patents),
+      // внутренние узлы — по типу, как обычно.
+      const originStyle = node.type === "publication" ? ORIGIN_STYLE[node.attrs?.origin] : null;
+      const color = originStyle ? originStyle.color : (TYPE_COLOR[node.type] || PALETTE.ink);
       const { shape, filled } = TYPE_SHAPE[node.type] || { shape: "circle", filled: true };
       const isHovered = node.id === hoveredNodeId;
       const isActive = node.id === selectedNodeId || isHovered || (hasHighlight && highlightNodeIds.has(node.id));
@@ -166,6 +177,30 @@ export default function GraphView({
           ctx.lineWidth = 2.2 / globalScale;
           ctx.strokeStyle = isHovered ? PALETTE.secondary : PALETTE.primary;
           ctx.stroke();
+        }
+
+        // Угловой бейдж внешнего источника: залитый кружок цвета источника с
+        // буквой S (Scholar) / P (Patents) в правом верхнем углу узла.
+        if (originStyle) {
+          const bx = node.x + radius * 1.25;
+          const by = node.y - radius * 0.85;
+          const br = Math.max(3 / globalScale, radius * 0.7);
+          ctx.beginPath();
+          ctx.arc(bx, by, br, 0, 2 * Math.PI);
+          ctx.fillStyle = originStyle.color;
+          ctx.fill();
+          ctx.lineWidth = 1 / globalScale;
+          ctx.strokeStyle = PALETTE.surface;
+          ctx.stroke();
+          if (globalScale > 1) {
+            const fs = br * 1.3;
+            ctx.font = `700 ${fs}px Inter, sans-serif`;
+            ctx.fillStyle = PALETTE.surface;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(originStyle.letter, bx, by + fs * 0.05);
+            ctx.textBaseline = "alphabetic";
+          }
         }
       }
 

@@ -20,10 +20,17 @@ from __future__ import annotations
 from typing import Any, Iterator
 
 from backend.llm_client import complete_stream, is_configured as llm_configured
-from backend.rag.chunk_graph import build_graph_from_hits
+from backend.rag.chunk_graph import (
+    add_external_sources,
+    build_graph_from_hits,
+    build_internal_graph,
+    finalize_graph,
+)
+from backend.rag.external_search import search_external
 from backend.rag.qa import (
     _NOT_FOUND_ANSWER,
     build_citations_and_context,
+    build_external_context,
     build_prompt,
     confidence_from_citations,
     fallback_answer,
@@ -36,6 +43,22 @@ _TYPE_LABELS = {
     "condition": "условия", "facility": "предприятия", "property": "свойства",
     "experiment": "эксперименты", "expert": "эксперты", "conclusion": "выводы",
 }
+
+
+def _external_summary(external: dict[str, Any]) -> str:
+    """Человекочитаемый итог внешнего поиска для «хода рассуждений»."""
+    if not external.get("enabled"):
+        return "Внешний поиск отключён."
+    keywords = external.get("keywords") or []
+    scholar = external.get("scholar") or []
+    patents = external.get("patents") or []
+    if not scholar and not patents:
+        msg = external.get("message") or "Внешние источники не найдены."
+        kw = f" Ключевые слова: {', '.join(keywords)}." if keywords else ""
+        return f"{msg}.{kw}" if not msg.endswith(".") else f"{msg}{kw}"
+    kw = ", ".join(keywords) if keywords else "—"
+    return (f"По ключевым словам ({kw}) найдено: публикаций — {len(scholar)}, "
+            f"патентов — {len(patents)}.")
 
 
 def _entities_summary(entities: list[dict[str, Any]]) -> str:
@@ -91,15 +114,24 @@ def stream_answer_events(
     hits = store.search(queries, top_k=top_k)
 
     if not hits:
-        empty = build_graph_from_hits([])
         yield {"type": "thinking", "stage": "retrieve",
                "text": "Релевантных фрагментов выше порога не найдено."}
+        # Внешний поиск пробуем даже без внутренних фрагментов — по ключевым словам
+        # из самого вопроса; на ответ по внутренней базе это не влияет, но найденные
+        # Scholar/Patents всё равно попадают в граф как узлы.
+        yield {"type": "thinking", "stage": "external",
+               "text": "Ищу внешние источники (Google Scholar и Google Patents) по ключевым словам вопроса…"}
+        external = search_external(question, [])
+        yield {"type": "thinking", "stage": "external", "text": _external_summary(external),
+               "external": external}
+        graph = build_graph_from_hits([], external=external)
         result = {
             "answer": _NOT_FOUND_ANSWER, "confidence": "нет данных", "citations": [],
             "grounded": False, "llm_used": False,
-            "chunk_graph": empty["subgraph"], "chunk_graph_node_ids": empty["node_ids"],
-            "chunk_graph_stats": empty["stats"], "experiment_chains": empty["experiment_chains"],
-            "highlight_entities": [], "query_original": original, "query_expansions": expansions,
+            "chunk_graph": graph["subgraph"], "chunk_graph_node_ids": graph["node_ids"],
+            "chunk_graph_stats": graph["stats"], "experiment_chains": graph["experiment_chains"],
+            "highlight_entities": [], "external": external,
+            "query_original": original, "query_expansions": expansions,
         }
         yield {"type": "answer_delta", "text": _NOT_FOUND_ANSWER}
         yield {"type": "done", "result": result}
@@ -112,27 +144,48 @@ def stream_answer_events(
                    f"Лучшая близость: {citations[0]['score']}.",
            "citations": citations}
 
-    # 4. Извлечение сущностей и связей графа из найденных фрагментов
+    # 4. Извлечение сущностей и связей графа из найденных фрагментов (LLM-NER — один раз)
     yield {"type": "thinking", "stage": "entities",
            "text": "Извлекаю сущности и связи графа знаний из найденных фрагментов…"}
-    graph = build_graph_from_hits(hits)
-    highlight = highlight_entities_from_graph(graph, hits)
+    build = build_internal_graph(hits)
+    highlight = highlight_entities_from_graph({"subgraph": build.gs.to_vis_json()}, hits)
     if highlight:
         yield {"type": "thinking", "stage": "entities",
                "text": "Ключевые сущности — " + _entities_summary(highlight),
                "entities": highlight}
-    stats = graph["stats"]
+    internal_stats = finalize_graph(build)["stats"]
     yield {"type": "thinking", "stage": "entities",
-           "text": f"Граф из фрагментов: {stats['entities']} сущностей, "
-                   f"{stats['relations']} связей."}
+           "text": f"Граф из фрагментов: {internal_stats['entities']} сущностей, "
+                   f"{internal_stats['relations']} связей."}
+
+    # 4b. Внешний поиск по ключевым словам из вопроса и сущностей графа; найденные
+    # Scholar/Patents добавляем в тот же граф как узлы-публикации (без повторного NER).
+    yield {"type": "thinking", "stage": "external",
+           "text": "Формирую поисковые запросы из ключевых слов и ищу внешние источники "
+                   "(Google Scholar и Google Patents)…"}
+    external = search_external(question, highlight)
+    yield {"type": "thinking", "stage": "external", "text": _external_summary(external),
+           "external": external}
+    external_context = build_external_context(external)
+    add_external_sources(build, external)
+    graph = finalize_graph(build)
+    stats = graph["stats"]
+    if graph["stats"].get("external_pubs"):
+        yield {"type": "thinking", "stage": "external",
+               "text": f"Добавил в граф внешних публикаций: {stats['external_pubs']} "
+                       f"(узлы Scholar/Patents связаны с сущностями по ключевым словам)."}
 
     # 5. Синтез финального ответа (потоково)
     confidence = confidence_from_citations(citations)
-    yield {"type": "thinking", "stage": "synthesize",
-           "text": "Формирую ответ строго по найденным фрагментам, со ссылками [N]…"}
+    synth_note = (
+        "Формирую ответ по фрагментам [N], дополняя внешними источниками [S*]/[P*] "
+        "и разделяя происхождение фактов…" if external_context
+        else "Формирую ответ строго по найденным фрагментам, со ссылками [N]…"
+    )
+    yield {"type": "thinking", "stage": "synthesize", "text": synth_note}
 
     parts: list[str] = []
-    for delta in complete_stream(build_prompt(context_lines, question)):
+    for delta in complete_stream(build_prompt(context_lines, question, external_context)):
         parts.append(delta)
         yield {"type": "answer_delta", "text": delta}
 
@@ -149,7 +202,7 @@ def stream_answer_events(
         "grounded": True, "llm_used": llm_ok,
         "chunk_graph": graph["subgraph"], "chunk_graph_node_ids": graph["node_ids"],
         "chunk_graph_stats": stats, "experiment_chains": graph["experiment_chains"],
-        "highlight_entities": highlight,
+        "highlight_entities": highlight, "external": external,
         "query_original": original, "query_expansions": expansions,
     }
     if auto_attach:

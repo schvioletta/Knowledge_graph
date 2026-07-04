@@ -1,5 +1,5 @@
 import { SlidersHorizontal } from "lucide-react";
-import { TYPE_COLOR, TYPE_LABEL, FILTERABLE_TYPES } from "../constants";
+import { TYPE_COLOR, TYPE_LABEL, FILTERABLE_TYPES, PALETTE } from "../constants";
 import GapToggle from "./GapToggle";
 import TimelineSlider from "./TimelineSlider";
 
@@ -71,6 +71,30 @@ export default function FilterDock({ typeFilter, onToggleType, onResetTypes, gap
         <div className="flex items-center gap-2 text-xs text-ink/60">
           <span className="inline-block h-0 w-4 border-b-2 border-dotted border-ink" />
           требует проверки (NEEDS_REVIEW)
+        </div>
+      </div>
+
+      <div className="h-px w-full bg-ink/10" />
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] uppercase tracking-wide text-ink/50">Внешние источники</span>
+        <div className="flex items-center gap-2 text-xs text-ink/60">
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-surface"
+            style={{ background: PALETTE.secondary }}
+          >
+            S
+          </span>
+          Google Scholar (научная публикация)
+        </div>
+        <div className="flex items-center gap-2 text-xs text-ink/60">
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-surface"
+            style={{ background: PALETTE.accent }}
+          >
+            P
+          </span>
+          Google Patents (патент)
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Network, FileSearch, Loader2, FileText, Link as LinkIcon, AlertTriangle,
   Download, ChevronDown, FileJson, FileType,
+  Database, GraduationCap, Award, ExternalLink, SearchX,
 } from "lucide-react";
 import DetailPanel from "./DetailPanel";
 import ThinkingBlock from "./ThinkingBlock";
@@ -204,6 +205,157 @@ function ExperimentChains({ chains, onHighlightChain }) {
   );
 }
 
+function relevanceStyle(relevance) {
+  if (relevance >= 0.66) return "border-secondary/40 text-secondary";
+  if (relevance >= 0.4) return "border-accent/40 text-accent";
+  return "border-ink/25 text-ink/50";
+}
+
+// Одна карточка внешнего источника (научная публикация или патент) со всеми
+// обязательными полями: название+ссылка, авторы, год, журнал/номер патента,
+// краткое описание, ключевые слова находки и оценка релевантности.
+function ExternalSourceCard({ item, index, prefix }) {
+  const authors = (item.authors || []).join(", ");
+  const meta = [authors, item.year, item.venue].filter(Boolean).join(" · ");
+  return (
+    <li className="rounded border border-ink/15 bg-surface px-2.5 py-1.5 text-xs">
+      <div className="flex items-start gap-1.5 text-ink/80">
+        <span className="font-semibold text-primary">[{prefix}{index}]</span>
+        {item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="source-glow flex-1 font-medium leading-snug underline-offset-2 hover:underline"
+            title={item.url}
+          >
+            {item.title || "(без названия)"}
+            <ExternalLink size={10} className="ml-1 inline align-baseline text-ink/40" />
+          </a>
+        ) : (
+          <span className="flex-1 font-medium leading-snug">{item.title || "(без названия)"}</span>
+        )}
+        {typeof item.relevance === "number" && (
+          <span
+            title="Оценка релевантности запросу (0–1)"
+            className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-wide ${relevanceStyle(item.relevance)}`}
+          >
+            {item.relevance.toFixed(2)}
+          </span>
+        )}
+      </div>
+      {meta && <div className="mt-0.5 text-[11px] text-ink/45">{meta}</div>}
+      {item.snippet && <p className="mt-1 line-clamp-2 text-ink/55">{item.snippet}</p>}
+      {(item.matched_keywords || []).length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          <span className="text-[9px] uppercase tracking-wide text-ink/35">по словам:</span>
+          {item.matched_keywords.map((k) => (
+            <span key={k} className="rounded bg-primary/10 px-1 py-0.5 text-[9px] text-primary/80">
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function SourceCategory({ icon: Icon, title, count, children }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink/50">
+        <Icon size={12} className="text-ink/40" />
+        {title}
+        {count != null && <span className="text-ink/30">· {count}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// Раздел «Источники» с отдельными категориями: внутренняя база (RAG/документы),
+// Google Scholar, Google Patents. Внешний блок полностью независим от внутреннего —
+// если внешних не нашлось, показывается штатное сообщение, а цитаты RAG остаются.
+function SourcesSection({ citations, external, highlightEntities }) {
+  const scholar = external?.scholar || [];
+  const patents = external?.patents || [];
+  const externalEnabled = external?.enabled;
+  const nothingExternal = externalEnabled && scholar.length === 0 && patents.length === 0;
+  const notFoundMsg =
+    external?.message || "По данным ключевым словам релевантные публикации и патенты не найдены";
+
+  if (!citations.length && !externalEnabled) return null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-ink/60">Источники</div>
+
+      {citations.length > 0 && (
+        <SourceCategory icon={Database} title="Внутренняя база знаний (RAG / документы)" count={citations.length}>
+          <ul className="flex flex-col gap-1.5">
+            {citations.map((c) => {
+              const location = cleanLocation(c.location);
+              const isLink = c.source_type === "link";
+              return (
+                <li key={c.index} className="rounded border border-ink/15 bg-surface px-2.5 py-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 text-ink/80">
+                    <span className="font-semibold text-primary">[{c.index}]</span>
+                    {isLink ? <LinkIcon size={11} /> : <FileText size={11} />}
+                    {isLink && c.source_name ? (
+                      <a
+                        href={c.source_name}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="source-glow truncate underline-offset-2 hover:underline"
+                        title={c.source_name}
+                      >
+                        {c.title}
+                      </a>
+                    ) : (
+                      <span className="source-glow truncate" title={c.title}>{c.title}</span>
+                    )}
+                    {location && <span className="ml-auto shrink-0 text-ink/40">{location}</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-ink/50">
+                    <HighlightedText text={cleanSnippet(c.snippet)} entities={highlightEntities} />
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </SourceCategory>
+      )}
+
+      {externalEnabled && scholar.length > 0 && (
+        <SourceCategory icon={GraduationCap} title="Google Scholar — научные публикации" count={scholar.length}>
+          <ul className="flex flex-col gap-1.5">
+            {scholar.map((s, i) => (
+              <ExternalSourceCard key={`s${i}`} item={s} index={i + 1} prefix="S" />
+            ))}
+          </ul>
+        </SourceCategory>
+      )}
+
+      {externalEnabled && patents.length > 0 && (
+        <SourceCategory icon={Award} title="Google Patents — патенты" count={patents.length}>
+          <ul className="flex flex-col gap-1.5">
+            {patents.map((p, i) => (
+              <ExternalSourceCard key={`p${i}`} item={p} index={i + 1} prefix="P" />
+            ))}
+          </ul>
+        </SourceCategory>
+      )}
+
+      {nothingExternal && (
+        <div className="flex items-center gap-1.5 rounded border border-ink/10 bg-surface/60 px-2.5 py-2 text-xs text-ink/50">
+          <SearchX size={13} className="shrink-0 text-ink/40" />
+          {notFoundMsg}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RagAnswer({
   result, question, streaming, thinkingSteps, streamAnswer, liveEntities, onEntityClick, onHighlightChain,
 }) {
@@ -287,41 +439,12 @@ function RagAnswer({
         </div>
       ) : null}
 
-      {hasResult && result.citations.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[11px] uppercase tracking-wide text-ink/50">Источники</div>
-          <ul className="flex flex-col gap-1.5">
-            {result.citations.map((c) => {
-              const location = cleanLocation(c.location);
-              const isLink = c.source_type === "link";
-              return (
-                <li key={c.index} className="rounded border border-ink/15 bg-surface px-2.5 py-1.5 text-xs">
-                  <div className="flex items-center gap-1.5 text-ink/80">
-                    <span className="font-semibold text-primary">[{c.index}]</span>
-                    {isLink ? <LinkIcon size={11} /> : <FileText size={11} />}
-                    {isLink && c.source_name ? (
-                      <a
-                        href={c.source_name}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="source-glow truncate underline-offset-2 hover:underline"
-                        title={c.source_name}
-                      >
-                        {c.title}
-                      </a>
-                    ) : (
-                      <span className="source-glow truncate" title={c.title}>{c.title}</span>
-                    )}
-                    {location && <span className="ml-auto shrink-0 text-ink/40">{location}</span>}
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-ink/50">
-                    <HighlightedText text={cleanSnippet(c.snippet)} entities={result.highlight_entities} />
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+      {hasResult && (
+        <SourcesSection
+          citations={result.citations}
+          external={result.external}
+          highlightEntities={result.highlight_entities}
+        />
       )}
     </div>
   );
