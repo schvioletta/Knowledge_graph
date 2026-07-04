@@ -47,7 +47,7 @@ from backend.rag.lexical_boost import (
     extract_query_signals,
     lexical_score,
 )
-from backend.rag.metadata_extract import DocumentMetadata
+from backend.rag.metadata_extract import DocumentMetadata, rag_activate_blocks
 
 _MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 _EMBED_DIM = 384
@@ -417,7 +417,7 @@ class Neo4jDocumentStore:
             return None
 
         blocks, _ = load_document(source_path)
-        text_chunks = chunk_blocks(blocks)
+        text_chunks = chunk_blocks(rag_activate_blocks(source_path, blocks))
         if not text_chunks:
             return None
 

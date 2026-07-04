@@ -16,7 +16,9 @@ from pydantic import BaseModel, Field
 from backend.llm_client import complete, is_configured
 from backend.nlp_pipeline.chunking import chunk_blocks
 from backend.nlp_pipeline.ingest import FileMeta, TextBlock
-from backend.nlp_pipeline.sections import extract_key_sections
+from backend.nlp_pipeline.sections import SECTION_ORDER, extract_key_sections
+
+_ARTICLES_FOLDER = "статьи"
 
 _SYSTEM_PROMPT = """Ты — экстрактор метаданных научных и технических документов (RU/EN).
 По фрагменту текста извлеки метаданные СТРОГО из текста, не придумывай факты.
@@ -51,9 +53,32 @@ class DocumentMetadata(BaseModel):
     abstract: str = ""
 
 
+def is_articles_source(source_path: str | Path) -> bool:
+    """Файл из папки «статьи» (любой уровень вложенности, без учёта регистра)."""
+    return _ARTICLES_FOLDER in (p.lower() for p in Path(source_path).parts)
+
+
 def abstract_blocks_from_document(blocks: list[TextBlock]) -> list[TextBlock]:
     sections = extract_key_sections(blocks)
     return sections.get("abstract") or blocks[:3]
+
+
+def rag_index_blocks(source_path: str | Path, blocks: list[TextBlock]) -> list[TextBlock]:
+    """Блоки для офлайн-индекса RAG: статьи — аннотация, остальные — весь текст."""
+    if is_articles_source(source_path):
+        return abstract_blocks_from_document(blocks)
+    return blocks
+
+
+def rag_activate_blocks(source_path: str | Path, blocks: list[TextBlock]) -> list[TextBlock]:
+    """Блоки при активации документа по запросу: статьи — ключевые секции, остальные — весь текст."""
+    if not is_articles_source(source_path):
+        return blocks
+    sections = extract_key_sections(blocks)
+    selected: list[TextBlock] = []
+    for name in SECTION_ORDER:
+        selected.extend(sections.get(name, []))
+    return selected or blocks
 
 
 def abstract_text(blocks: list[TextBlock]) -> str:

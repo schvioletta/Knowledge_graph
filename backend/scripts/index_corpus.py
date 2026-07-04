@@ -15,7 +15,7 @@ load_dotenv()
 
 from backend.nlp_pipeline.ingest import LOADERS, file_meta, load_document
 from backend.nlp_pipeline.manifest import ProcessedManifest, file_sha256
-from backend.rag.metadata_extract import abstract_blocks_from_document, extract_metadata
+from backend.rag.metadata_extract import extract_metadata, rag_index_blocks
 from backend.rag.store import Neo4jDocumentStore
 
 DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
                 blocks, _ = load_document(path)
                 fmeta = file_meta(path)
                 metadata = extract_metadata(blocks, fmeta)
-                abs_blocks = abstract_blocks_from_document(blocks)
+                abs_blocks = rag_index_blocks(path, blocks)
                 fhash = file_sha256(path)
                 _meta, is_dup = store.index_document(path, metadata, abs_blocks, fhash, force=args.force)
                 if is_dup and not args.force:
