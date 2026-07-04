@@ -19,21 +19,6 @@ export default function Footer() {
   </div>
 </div>
 
-        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink/70">
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="transition hover:text-ink">
-            GitHub
-          </a>
-          <a href="#status" className="transition hover:text-ink">
-            API
-          </a>
-          <a href="#architecture" className="transition hover:text-ink">
-            Документация
-          </a>
-          <a href="#top" className="transition hover:text-ink">
-            Контакты
-          </a>
-        </nav>
-
         <span className="text-xs text-ink/50">
           Материалы и горно-металлургические процессы · MVP
         </span>
