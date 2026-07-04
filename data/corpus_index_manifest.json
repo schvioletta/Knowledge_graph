@@ -1,0 +1,26 @@
+{
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Доклады/Доклад_Вострикова Н.М.pdf": {
+    "sha256": "78dba7f3f49eae8bc814dc0fc2b20333ce207c3c06cc9b8c98e517269a5499d2",
+    "processed_at": "2026-07-04T03:00:01"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/55 Приложение. Текст статьи.docx": {
+    "sha256": "1e0e0c531de26e4cd86bef77445fe6d85ed78fe9f01fa134d87e13d4a2f68586",
+    "processed_at": "2026-07-04T03:01:18"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/9 статья (2).docx": {
+    "sha256": "4c52a424626c31ff44df0a5afb327574c8f5941afd0969c1f696520c91d52c87",
+    "processed_at": "2026-07-04T03:01:21"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/32 Статья - Салтыков П.М. (ЛГМ).docx": {
+    "sha256": "aae623f88b63a9fc5e6bbf186cb46818b49c484ae10a4f674927ce601dfd091c",
+    "processed_at": "2026-07-04T03:01:25"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/13 Приложение. Статья.pdf": {
+    "sha256": "ad36c995cfe3e27966fbb9cea6014d71f5f59125301c0be180b0cb61dfe266b5",
+    "processed_at": "2026-07-04T03:01:29"
+  },
+  "/Users/alexander/PycharmProjects/Knowledge_graph/data/raw/Статьи/52 Solid household and industrial waste paper 28-09-2021-rus.docx": {
+    "sha256": "4baaf64d1a2d69629f7bf9be0b6cd9e4b9961268b8e7d4fe468ded8222cb7a69",
+    "processed_at": "2026-07-04T03:01:32"
+  }
+}

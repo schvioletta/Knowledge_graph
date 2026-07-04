@@ -247,8 +247,18 @@ python -m backend.scripts.index_corpus --limit 5
 
 API:
 
-- `GET /api/rag/ask?q=...&auto_attach=true` — auto-attach + grounded ответ
+- `GET /api/rag/ask?q=...&auto_attach=true` — auto-attach + grounded ответ + **граф из citation-чанков**
 - `POST /api/rag/discover-and-attach` — только подбор и прикрепление документов
+
+### Граф из citation-чанков
+
+После RAG-ответа по **6 top citation-чанкам** вызывается `ner_extract` и строится
+session-граф (префикс `rg_`, не пишется в `real_graph.json`). На главном холсте после
+запроса показывается **только этот граф** (demo-граф до первого запроса сохраняется).
+Узлы содержат `attrs` в JSON — карточка деталей без `/api/graph/{id}`. Если чанков
+нет — холст очищается.
+
+---
 
 ## Базовый RAG по PDF
 

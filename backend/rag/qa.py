@@ -15,6 +15,7 @@ from typing import Any
 from backend.llm_client import complete as llm_complete
 from backend.llm_client import get_last_error as llm_last_error
 from backend.llm_client import is_configured as llm_configured
+from backend.rag.chunk_graph import build_graph_from_hits
 from backend.rag.store import Neo4jDocumentStore
 
 _NOT_FOUND_ANSWER = (
@@ -51,12 +52,16 @@ def answer_question(
     hits = store.search(queries, top_k=top_k)
 
     if not hits:
+        empty = build_graph_from_hits([])
         return {
             "answer": _NOT_FOUND_ANSWER,
             "confidence": "нет данных",
             "citations": [],
             "grounded": False,
             "llm_used": False,
+            "chunk_graph": empty["subgraph"],
+            "chunk_graph_node_ids": empty["node_ids"],
+            "chunk_graph_stats": empty["stats"],
         }
 
     citations = []
@@ -106,10 +111,14 @@ def answer_question(
         )
         llm_ok = False
 
+    graph = build_graph_from_hits(hits)
     return {
         "answer": answer,
         "confidence": confidence,
         "citations": citations,
         "grounded": True,
         "llm_used": llm_ok,
+        "chunk_graph": graph["subgraph"],
+        "chunk_graph_node_ids": graph["node_ids"],
+        "chunk_graph_stats": graph["stats"],
     }

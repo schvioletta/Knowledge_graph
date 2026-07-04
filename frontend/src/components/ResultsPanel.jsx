@@ -161,6 +161,15 @@ function RagAnswer({ loading, result, question }) {
         expansions={result.query_expansions}
       />
 
+      {result.chunk_graph_stats && (
+        <p className="text-xs text-ink/50">
+          Граф из фрагментов: {result.chunk_graph_stats.entities} сущностей,{" "}
+          {result.chunk_graph_stats.relations} связей
+          {result.chunk_graph_stats.chunks != null && ` · ${result.chunk_graph_stats.chunks} чанков`}
+          {result.chunk_graph_stats.llm_skipped && " (NER без LLM — только публикации)"}
+        </p>
+      )}
+
       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
         {result.answer}
       </pre>

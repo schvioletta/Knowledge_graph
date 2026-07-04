@@ -29,6 +29,7 @@ export function exportAsJson({ question, result }) {
     llm_used: result.llm_used,
     query_original: result.query_original,
     query_expansions: result.query_expansions,
+    chunk_graph_stats: result.chunk_graph_stats,
     citations: result.citations,
     exported_at: new Date().toISOString(),
   };
@@ -50,6 +51,13 @@ export function exportAsMarkdown({ question, result }) {
   if (result.query_expansions?.length) {
     lines.push("**Расширенные формулировки поиска:**");
     result.query_expansions.forEach((q) => lines.push(`- ${q}`));
+    lines.push("");
+  }
+  if (result.chunk_graph_stats) {
+    const s = result.chunk_graph_stats;
+    lines.push(
+      `**Граф из фрагментов:** ${s.entities} сущностей, ${s.relations} связей, ${s.chunks} чанков`,
+    );
     lines.push("");
   }
   lines.push(

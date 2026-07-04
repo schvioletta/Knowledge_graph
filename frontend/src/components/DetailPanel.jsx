@@ -133,12 +133,14 @@ export default function DetailPanel({ node, detail, onExpand, onClose }) {
           );
         })}
 
-      <button
-        onClick={() => onExpand(node.id)}
-        className="mt-2 rounded border border-ink/20 bg-surface py-2 text-sm text-ink transition hover:border-primary/50"
-      >
-        Развернуть соседей ↴
-      </button>
+      {!String(node.id).startsWith("rg_") && (
+        <button
+          onClick={() => onExpand(node.id)}
+          className="mt-2 rounded border border-ink/20 bg-surface py-2 text-sm text-ink transition hover:border-primary/50"
+        >
+          Развернуть соседей ↴
+        </button>
+      )}
     </div>
   );
 }

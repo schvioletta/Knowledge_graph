@@ -48,6 +48,21 @@ function mergeVis(nodesMap, links, vis) {
   return [newNodesMap, newLinks];
 }
 
+function applyChunkGraphToState(r, setNodesMap, setLinks, setHighlightIds, setFitSignal) {
+  if (r?.chunk_graph?.nodes?.length) {
+    const nm = {};
+    for (const n of r.chunk_graph.nodes) nm[n.id] = n;
+    setNodesMap(nm);
+    setLinks(r.chunk_graph.links.map((l) => ({ ...l })));
+    setHighlightIds(new Set(r.chunk_graph_node_ids || []));
+  } else {
+    setNodesMap({});
+    setLinks([]);
+    setHighlightIds(new Set());
+  }
+  setFitSignal((s) => s + 1);
+}
+
 export default function App() {
   const [nodesMap, setNodesMap] = useState({});
   const [links, setLinks] = useState([]);
@@ -176,11 +191,16 @@ export default function App() {
       return;
     }
     setResultsTab("schema");
+    if (String(node.id).startsWith("rg_")) {
+      setDetail(null);
+      return;
+    }
     const d = await api.node(node.id);
     setDetail(d);
   };
 
   const handleExpand = async (nodeId) => {
+    if (String(nodeId).startsWith("rg_")) return;
     const vis = await api.neighbors(nodeId, 1);
     setNodesMap((prev) => mergeVis(prev, links, vis)[0]);
     setLinks((prev) => mergeVis(nodesMap, prev, vis)[1]);
@@ -242,46 +262,39 @@ export default function App() {
     setGapEnabled(false);
     setCurrentQuestion(question);
     setActiveHistoryId(null);
-    // Граф-поиск структурно подсвечивает путь рассуждения прямо на графе
-    // (см. highlightIds) — сам текстовый ответ графа больше нигде не
-    // показывается, единственный текстовый ответ в интерфейсе теперь RAG
-    // по загруженным документам (вкладка «По документам»).
+    setSelectedNode(null);
+    setDetail(null);
     const ragPromise = api.ragAsk(question)
       .then(async (r) => {
         setRagResult(r);
+        applyChunkGraphToState(r, setNodesMap, setLinks, setHighlightIds, setFitSignal);
         await refreshDocuments();
-        // Каждый реально полученный ответ попадает в историю (даже «не нашлось» —
-        // это тоже завершённый ответ) — открыть его снова потом можно без
-        // повторного запроса к LLM/эмбеддингам, см. handleHistorySelect.
         const entry = { id: crypto.randomUUID(), question, timestamp: Date.now(), ragResult: r };
         setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
         setActiveHistoryId(entry.id);
         return r;
       })
-      .catch(() => { setRagResult(null); return null; })
-      .finally(() => setRagLoading(false));
-    try {
-      const result = await api.search(question);
-      setNodesMap((prev) => mergeVis(prev, links, result.subgraph)[0]);
-      setLinks((prev) => mergeVis(nodesMap, prev, result.subgraph)[1]);
-      setHighlightIds(new Set(result.path_node_ids));
-      setSelectedNode(null);
-      setDetail(null);
-      setFitSignal((s) => s + 1);
-    } finally {
-      setSearchLoading(false);
-    }
+      .catch(() => {
+        setRagResult(null);
+        applyChunkGraphToState(null, setNodesMap, setLinks, setHighlightIds, setFitSignal);
+        return null;
+      })
+      .finally(() => {
+        setSearchLoading(false);
+        setRagLoading(false);
+      });
     setResultsTab("documents");
     await ragPromise;
   };
 
   const handleHistorySelect = (entry) => {
-    // Открывает уже полученный ответ без повторного обращения к API — история
-    // хранит полный ragResult, а не только вопрос.
     setRagResult(entry.ragResult);
     setCurrentQuestion(entry.question);
     setActiveHistoryId(entry.id);
     setResultsTab("documents");
+    applyChunkGraphToState(entry.ragResult, setNodesMap, setLinks, setHighlightIds, setFitSignal);
+    setSelectedNode(null);
+    setDetail(null);
   };
 
   const handleHistoryDelete = (id) => {
