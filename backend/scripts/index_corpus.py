@@ -1,7 +1,7 @@
 """CLI: пакетная индексация корпуса data/raw/** для RAG.
 
-Извлекает метаданные (LLM + fallback), аннотацию, чанки abstract → Neo4j.
-Полная активация документов происходит при запросе через activate_for_query().
+Извлекает метаданные (LLM + fallback) и чанки полного текста документа → Neo4j.
+Дополнительная активация по запросу — через activate_for_query().
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ load_dotenv()
 
 from backend.nlp_pipeline.ingest import LOADERS, file_meta, load_document
 from backend.nlp_pipeline.manifest import ProcessedManifest, file_sha256
-from backend.rag.metadata_extract import extract_metadata, rag_index_blocks
+from backend.rag.metadata_extract import extract_metadata
 from backend.rag.store import Neo4jDocumentStore
 
 DEFAULT_RAW_ROOT = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
@@ -35,7 +35,7 @@ def collect_files(raw_root: Path) -> list[Path]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Индексация корпуса для RAG (abstract + метаданные)")
+    parser = argparse.ArgumentParser(description="Индексация корпуса для RAG (полный текст + метаданные)")
     parser.add_argument(
         "files",
         nargs="*",
@@ -95,15 +95,14 @@ def main(argv: list[str] | None = None) -> int:
                 blocks, _ = load_document(path)
                 fmeta = file_meta(path)
                 metadata = extract_metadata(blocks, fmeta)
-                abs_blocks = rag_index_blocks(path, blocks)
                 fhash = file_sha256(path)
-                _meta, is_dup = store.index_document(path, metadata, abs_blocks, fhash, force=args.force)
+                _meta, is_dup = store.index_document(path, metadata, blocks, fhash, force=args.force)
                 if is_dup and not args.force:
                     skipped += 1
                     print(f"  skip  {path.name} (уже в Neo4j)")
                 else:
                     indexed += 1
-                    print(f"  ok    {path.name} → {_meta.id} ({_meta.num_chunks} abstract chunks)")
+                    print(f"  ok    {path.name} → {_meta.id} ({_meta.num_chunks} chunks)")
                 manifest.mark_processed(rel)
             except Exception as e:
                 errors += 1
