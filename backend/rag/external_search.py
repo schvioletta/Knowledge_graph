@@ -34,9 +34,21 @@ _KEYWORD_TYPES = {
     "material", "process", "equipment", "facility", "team", "expert", "topic", "conclusion",
 }
 
-_ENABLED = os.getenv("EXTERNAL_SEARCH_ENABLED", "true").lower() not in ("0", "false", "no")
-_TIMEOUT = float(os.getenv("EXTERNAL_SEARCH_TIMEOUT", "12"))
-_MAX_PER_SOURCE = int(os.getenv("EXTERNAL_SEARCH_MAX", "5"))
+
+def _external_enabled() -> bool:
+    return os.getenv("EXTERNAL_SEARCH_ENABLED", "true").lower() not in ("0", "false", "no")
+
+
+def _timeout() -> float:
+    return float(os.getenv("EXTERNAL_SEARCH_TIMEOUT", "12"))
+
+
+def _max_per_source() -> int:
+    return int(os.getenv("EXTERNAL_SEARCH_MAX", "5"))
+
+
+_TIMEOUT = _timeout()
+_MAX_PER_SOURCE = _max_per_source()
 _SERPAPI_KEY = os.getenv("SERPAPI_KEY", "").strip()
 
 _UA = (
@@ -105,6 +117,51 @@ def _relevance(keywords: list[str], title: str, snippet: str, rank: int, total: 
     kw_frac = len(matched) / max(1, len(keywords))
     rank_score = 1.0 - (rank / max(1, total))
     return round(0.6 * kw_frac + 0.4 * rank_score, 2), matched
+
+
+def _search_query(keywords: list[str]) -> str:
+    """Короткий запрос: длинные цепочки из NER часто дают 0 в бесплатном Scholar."""
+    ranked = sorted(keywords, key=lambda k: (len(k) > 30, len(k.split()), len(k)))
+    picked: list[str] = []
+    for k in ranked:
+        if k not in picked:
+            picked.append(k)
+        if len(picked) >= 3:
+            break
+    return " ".join(picked) if picked else " ".join(keywords[:3])
+
+
+def _search_both(
+    query: str,
+    keywords: list[str],
+    use_serp: bool,
+) -> tuple[list["ExternalSource"], list["ExternalSource"], dict[str, str]]:
+    timeout = _timeout()
+    limit = _max_per_source()
+
+    def run_scholar() -> list[ExternalSource]:
+        return _serpapi("google_scholar", query, keywords, limit, "scholar") if use_serp \
+            else _search_scholar_free(query, keywords, limit)
+
+    def run_patents() -> list[ExternalSource]:
+        return _serpapi("google_patents", query, keywords, limit, "patent") if use_serp \
+            else _search_patents_free(query, keywords, limit)
+
+    scholar: list[ExternalSource] = []
+    patents: list[ExternalSource] = []
+    errors: dict[str, str] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+        futs = {"scholar": ex.submit(run_scholar), "patents": ex.submit(run_patents)}
+        for name, fut in futs.items():
+            try:
+                res = fut.result(timeout=timeout + 2)
+                if name == "scholar":
+                    scholar = res
+                else:
+                    patents = res
+            except Exception as e:
+                errors[name] = f"{type(e).__name__}: {e}"
+    return scholar, patents, errors
 
 
 # ---------------- провайдеры: бесплатно, без ключа ----------------
@@ -206,7 +263,7 @@ def _serpapi(engine: str, query: str, keywords: list[str], limit: int, kind: str
 def search_external(question: str, entities: list[dict[str, Any]]) -> dict[str, Any]:
     """Возвращает {enabled, keywords, query, scholar, patents, provider, message, errors}.
     Никогда не бросает исключений — при любой ошибке источник просто пустой."""
-    if not _ENABLED:
+    if not _external_enabled():
         return {"enabled": False, "keywords": [], "query": "", "scholar": [], "patents": [],
                 "provider": None, "message": None, "errors": {}}
 
@@ -215,34 +272,25 @@ def search_external(question: str, entities: list[dict[str, Any]]) -> dict[str, 
         return {"enabled": True, "keywords": [], "query": "", "scholar": [], "patents": [],
                 "provider": None, "message": _NOT_FOUND_MESSAGE, "errors": {}}
 
-    # Запрос — из нескольких самых сильных ключевых слов (комбинация терминов
-    # даёт релевантнее, чем полный текст вопроса).
-    query = " ".join(keywords[:3])
+    query = _search_query(keywords)
     use_serp = bool(_SERPAPI_KEY)
     provider = "serpapi" if use_serp else "free"
 
-    def run_scholar() -> list[ExternalSource]:
-        return _serpapi("google_scholar", query, keywords, _MAX_PER_SOURCE, "scholar") if use_serp \
-            else _search_scholar_free(query, keywords, _MAX_PER_SOURCE)
+    scholar, patents, errors = _search_both(query, keywords, use_serp)
 
-    def run_patents() -> list[ExternalSource]:
-        return _serpapi("google_patents", query, keywords, _MAX_PER_SOURCE, "patent") if use_serp \
-            else _search_patents_free(query, keywords, _MAX_PER_SOURCE)
-
-    scholar: list[ExternalSource] = []
-    patents: list[ExternalSource] = []
-    errors: dict[str, str] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-        futs = {"scholar": ex.submit(run_scholar), "patents": ex.submit(run_patents)}
-        for name, fut in futs.items():
-            try:
-                res = fut.result(timeout=_TIMEOUT + 2)
-                if name == "scholar":
-                    scholar = res
-                else:
-                    patents = res
-            except Exception as e:  # сеть/капча/парсинг — источник просто пустой
-                errors[name] = f"{type(e).__name__}: {e}"
+    # NER даёт узкие термины (Outotec, «анодные мешки») — Scholar часто возвращает 0.
+    # Повторяем поиск только по словам из вопроса.
+    if not scholar and not patents and entities:
+        fallback_keywords = extract_search_keywords(question, [])
+        fallback_query = _search_query(fallback_keywords)
+        if fallback_query and fallback_query.lower() != query.lower():
+            s2, p2, e2 = _search_both(fallback_query, fallback_keywords, use_serp)
+            if s2 or p2:
+                scholar, patents = s2, p2
+                keywords, query = fallback_keywords, fallback_query
+            for name, err in e2.items():
+                if name not in errors or not scholar and not patents:
+                    errors[name] = err
 
     message = None if (scholar or patents) else _NOT_FOUND_MESSAGE
     return {

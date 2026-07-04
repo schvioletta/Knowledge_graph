@@ -63,6 +63,7 @@ _DEFAULT_TOP_DOCS = 5
 # документов, заметно слабее лучшего совпадения (адаптируется к силе запроса).
 _ACTIVATE_MIN_SCORE = float(os.getenv("RAG_ACTIVATE_MIN_SCORE", "0.35"))
 _ACTIVATE_TOP_RATIO = float(os.getenv("RAG_ACTIVATE_TOP_RATIO", "0.7"))
+_DISCOVERY_CHUNK_CAP = int(os.getenv("RAG_DISCOVERY_CHUNK_CAP", "3"))
 
 
 def _now() -> str:
