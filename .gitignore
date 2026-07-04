@@ -225,3 +225,5 @@ data/llm_logs/
 data/search_results/
 
 data/corpus_index_manifest.json
+data/rag_eval/
+sandbox/
