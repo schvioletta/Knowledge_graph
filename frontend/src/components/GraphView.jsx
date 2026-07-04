@@ -212,7 +212,8 @@ export default function GraphView({
 
   // Рёбра CONTRADICTS/NEEDS_REVIEW всегда остаются на переднем плане (не гаснут
   // при поиске/наведении на другой узел) — это сигналы, которые нельзя пропустить.
-  const isSpecialLink = (link) => link.type === "CONTRADICTS" || link.type === "NEEDS_REVIEW";
+  const isSpecialLink = (link) =>
+    link.type === "CONTRADICTS" || link.type === "NEEDS_REVIEW" || link.type === "CHAIN_STEP";
   const isActiveLink = useCallback(
     (link) => isPathLink(link) || isHoverLink(link) || isSpecialLink(link),
     [isPathLink, isHoverLink]
@@ -223,6 +224,7 @@ export default function GraphView({
       if (isHoverLink(link) || isPathLink(link)) return PALETTE.primary;
       if (link.type === "CONTRADICTS") return `color-mix(in srgb, ${PALETTE.ink} 92%, transparent)`;
       if (link.type === "NEEDS_REVIEW") return `color-mix(in srgb, ${PALETTE.ink} 72%, transparent)`;
+      if (link.type === "CHAIN_STEP") return PALETTE.accent;
       if (hasHighlight) return `color-mix(in srgb, ${PALETTE.ink} 8%, transparent)`;
       if (hoveredNodeId) return `color-mix(in srgb, ${PALETTE.ink} 12%, transparent)`;
       // Базовая видимость связей поднята с 28% до 45% — структура графа должна
@@ -235,6 +237,7 @@ export default function GraphView({
   const linkLineDash = useCallback((link) => {
     if (link.type === "CONTRADICTS") return [5, 3];
     if (link.type === "NEEDS_REVIEW") return [1, 3];
+    if (link.type === "CHAIN_STEP") return [6, 4];
     return null;
   }, []);
 
@@ -243,6 +246,7 @@ export default function GraphView({
       if (isHoverLink(link) || isPathLink(link)) return 2.6;
       if (link.type === "CONTRADICTS") return 2.6;
       if (link.type === "NEEDS_REVIEW") return 2;
+      if (link.type === "CHAIN_STEP") return 2.2;
       return 1.3;
     },
     [isHoverLink, isPathLink]

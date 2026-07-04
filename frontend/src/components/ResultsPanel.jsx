@@ -114,7 +114,67 @@ function QueryExpansions({ original, expansions }) {
   );
 }
 
-function RagAnswer({ loading, result, question }) {
+const STEP_TYPE_COLOR = {
+  material: "text-primary",
+  process: "text-secondary",
+  equipment: "text-accent",
+  result: "text-ink/90",
+};
+
+function formatStepItems(items) {
+  if (!items?.length) return null;
+  return items.map((i) => i.name).filter(Boolean).join(", ");
+}
+
+function ExperimentChains({ chains, onHighlightChain }) {
+  if (!chains?.length) return null;
+
+  return (
+    <div className="rounded-md border border-secondary/25 bg-secondary/5 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-secondary/90">
+        Цепочки: материал → процесс → оборудование → результат
+      </div>
+      <ul className="mt-2 flex flex-col gap-2">
+        {chains.map((chain) => {
+          const pub = chain.publication?.name;
+          const title = chain.experiment_name || "Эксперимент";
+          return (
+            <li key={chain.experiment_id}>
+              <button
+                type="button"
+                onClick={() => onHighlightChain?.(chain.node_ids || chain.path_ids)}
+                className="w-full rounded border border-ink/10 bg-surface/80 px-2.5 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                title="Подсветить цепочку на графе"
+              >
+                <div className="text-[10px] text-ink/45">
+                  {pub ? `${pub} · ` : ""}
+                  {title}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs leading-snug">
+                  {chain.steps.map((step, idx) => {
+                    const text = formatStepItems(step.items);
+                    return (
+                      <span key={step.key} className="inline-flex items-center gap-1">
+                        {idx > 0 && <span className="text-ink/30">→</span>}
+                        {text ? (
+                          <span className={STEP_TYPE_COLOR[step.key] || "text-ink"}>{text}</span>
+                        ) : (
+                          <span className="text-ink/25">—</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function RagAnswer({ loading, result, question, onHighlightChain }) {
   if (loading) {
     return (
       <div className="flex h-full items-center gap-2 p-5 text-sm text-ink/50">
@@ -161,6 +221,11 @@ function RagAnswer({ loading, result, question }) {
         expansions={result.query_expansions}
       />
 
+      <ExperimentChains
+        chains={result.experiment_chains}
+        onHighlightChain={onHighlightChain}
+      />
+
       {result.chunk_graph_stats && (
         <p className="text-xs text-ink/50">
           Граф из фрагментов: {result.chunk_graph_stats.entities} сущностей,{" "}
@@ -198,6 +263,7 @@ function RagAnswer({ loading, result, question }) {
 
 export default function ResultsPanel({
   activeTab, onTabChange, question, ragResult, ragLoading, node, detail, onExpand, onClose,
+  onHighlightChain,
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -224,7 +290,14 @@ export default function ResultsPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "documents" && <RagAnswer loading={ragLoading} result={ragResult} question={question} />}
+        {activeTab === "documents" && (
+          <RagAnswer
+            loading={ragLoading}
+            result={ragResult}
+            question={question}
+            onHighlightChain={onHighlightChain}
+          />
+        )}
 
         {activeTab === "schema" && (
           <DetailPanel node={node} detail={detail} onExpand={onExpand} onClose={onClose} />

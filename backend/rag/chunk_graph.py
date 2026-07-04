@@ -14,6 +14,7 @@ from backend.nlp_pipeline.graph_writer import GraphWriter, _stable_id_num, infer
 from backend.nlp_pipeline.ner_extract import ExtractionResult, extract_chunk_entities
 from backend.nlp_pipeline.resolve import AliasTable, resolve_entity
 from backend.nlp_pipeline.validate import validate_entity_attrs, validate_relation
+from backend.rag.experiment_chains import append_chain_step_links, extract_experiment_chains
 from backend.schema import Entity, EntityType, Relation, RelationType
 
 _RG_PREFIX = "rg_"
@@ -106,6 +107,7 @@ def build_graph_from_hits(hits: list[dict[str, Any]]) -> dict[str, Any]:
             "subgraph": {"nodes": [], "links": []},
             "node_ids": [],
             "stats": {"entities": 0, "relations": 0, "chunks": 0, "publications": 0},
+            "experiment_chains": [],
         }
 
     gs = GraphStore()
@@ -138,7 +140,8 @@ def build_graph_from_hits(hits: list[dict[str, Any]]) -> dict[str, Any]:
         if results:
             writer.write_chunk_results(pub_id, source_name, results)
 
-    subgraph = gs.to_vis_json()
+    experiment_chains = extract_experiment_chains(gs)
+    subgraph = append_chain_step_links(gs.to_vis_json(), experiment_chains)
     node_ids = [n["id"] for n in subgraph["nodes"]]
     entity_count = sum(1 for n in subgraph["nodes"] if n.get("type") != EntityType.PUBLICATION.value)
     pub_count = sum(1 for n in subgraph["nodes"] if n.get("type") == EntityType.PUBLICATION.value)
@@ -152,4 +155,9 @@ def build_graph_from_hits(hits: list[dict[str, Any]]) -> dict[str, Any]:
     if llm_skipped:
         stats["llm_skipped"] = True
 
-    return {"subgraph": subgraph, "node_ids": node_ids, "stats": stats}
+    return {
+        "subgraph": subgraph,
+        "node_ids": node_ids,
+        "stats": stats,
+        "experiment_chains": experiment_chains,
+    }

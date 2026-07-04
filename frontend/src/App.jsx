@@ -256,6 +256,12 @@ export default function App() {
     }
   };
 
+  const handleHighlightChain = (nodeIds) => {
+    if (!nodeIds?.length) return;
+    setHighlightIds(new Set(nodeIds));
+    setFitSignal((s) => s + 1);
+  };
+
   const handleSearch = async (question) => {
     setSearchLoading(true);
     setRagLoading(true);
@@ -519,6 +525,7 @@ export default function App() {
                   detail={detail}
                   onExpand={handleExpand}
                   onClose={() => { setSelectedNode(null); setDetail(null); }}
+                  onHighlightChain={handleHighlightChain}
                 />
               </div>
             </div>

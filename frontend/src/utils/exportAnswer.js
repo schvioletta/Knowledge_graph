@@ -30,6 +30,7 @@ export function exportAsJson({ question, result }) {
     query_original: result.query_original,
     query_expansions: result.query_expansions,
     chunk_graph_stats: result.chunk_graph_stats,
+    experiment_chains: result.experiment_chains,
     citations: result.citations,
     exported_at: new Date().toISOString(),
   };
@@ -58,6 +59,20 @@ export function exportAsMarkdown({ question, result }) {
     lines.push(
       `**Граф из фрагментов:** ${s.entities} сущностей, ${s.relations} связей, ${s.chunks} чанков`,
     );
+    lines.push("");
+  }
+  if (result.experiment_chains?.length) {
+    lines.push("**Цепочки (материал → процесс → оборудование → результат):**", "");
+    for (const chain of result.experiment_chains) {
+      const parts = chain.steps.map((step) => {
+        const names = step.items?.map((i) => i.name).filter(Boolean).join(", ");
+        return names || "—";
+      });
+      const header = chain.publication?.name
+        ? `${chain.publication.name} · ${chain.experiment_name || "Эксперимент"}`
+        : (chain.experiment_name || "Эксперимент");
+      lines.push(`- **${header}:** ${parts.join(" → ")}`);
+    }
     lines.push("");
   }
   lines.push(

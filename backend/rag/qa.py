@@ -62,6 +62,7 @@ def answer_question(
             "chunk_graph": empty["subgraph"],
             "chunk_graph_node_ids": empty["node_ids"],
             "chunk_graph_stats": empty["stats"],
+            "experiment_chains": empty["experiment_chains"],
         }
 
     citations = []
@@ -121,4 +122,5 @@ def answer_question(
         "chunk_graph": graph["subgraph"],
         "chunk_graph_node_ids": graph["node_ids"],
         "chunk_graph_stats": graph["stats"],
+        "experiment_chains": graph["experiment_chains"],
     }
