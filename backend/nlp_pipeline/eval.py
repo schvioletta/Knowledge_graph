@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 
 from backend.lexicon import name_similarity
-from backend.llm_client import is_configured
+from backend.ner_llm import is_ner_configured
 from backend.nlp_pipeline.ner_extract import ExtractionResult, RawEntity, RawRelation, extract_chunk_entities
 
 NAME_SIM_THRESHOLD = 0.5
@@ -95,11 +95,11 @@ def main() -> None:
     parser.add_argument("golden_dir", nargs="?", default="data/golden")
     args = parser.parse_args()
 
-    if not is_configured():
+    if not is_ner_configured():
         print(
-            "ВНИМАНИЕ: LLM не сконфигурирован — предсказание всегда будет пустым, "
+            "ВНИМАНИЕ: NER LLM не сконфигурирован — предсказание всегда будет пустым, "
             "метрики ниже не отражают реальное качество экстрактора. Задайте "
-            "GIGACHAT_API_KEY и повторите запуск."
+            "NER_USE_OLLAMA=1 + QUERY_EXPAND_MODEL или GIGACHAT_API_KEY и повторите запуск."
         )
 
     files = sorted(Path(args.golden_dir).glob("*.json"))

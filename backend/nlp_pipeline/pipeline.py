@@ -42,7 +42,7 @@ from datetime import datetime
 from pathlib import Path
 
 from backend.graph_store import GraphStore
-from backend.llm_client import is_configured
+from backend.ner_llm import is_ner_configured
 from backend.nlp_pipeline.chunking import chunk_blocks
 from backend.nlp_pipeline.graph_writer import GraphWriter
 from backend.nlp_pipeline.ingest import load_document
@@ -205,9 +205,9 @@ def main() -> None:
     alias_table = AliasTable(args.alias_table)
     writer = GraphWriter(gs, alias_table)
 
-    if not is_configured():
+    if not is_ner_configured():
         _log(
-            "ВНИМАНИЕ: LLM не сконфигурирован (нет GIGACHAT_API_KEY) — "
+            "ВНИМАНИЕ: NER LLM не сконфигурирован (NER_USE_OLLAMA + модель или GIGACHAT_API_KEY) — "
             "будут созданы только узлы Publication без извлечённых сущностей."
         )
 
