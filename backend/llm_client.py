@@ -31,9 +31,9 @@ def _get_client():
     """Ленивая инициализация клиента GigaChat (один OAuth-токен на процесс)."""
     global _client
     if _client is None:
-        from gigachat import GigaChat
+        from gigachat import GigaChatSyncClient
 
-        _client = GigaChat(
+        _client = GigaChatSyncClient(
             credentials=os.environ["GIGACHAT_API_KEY"],
             scope=os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS"),
             model=os.getenv("GIGACHAT_MODEL", "GigaChat"),

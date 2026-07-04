@@ -20,6 +20,11 @@ function safeFilename(question) {
   return base || "answer";
 }
 
+const EXPAND_LLM_EXPORT = {
+  ollama: "Qwen (локально)",
+  gigachat: "GigaChat (облако)",
+};
+
 export function exportAsJson({ question, result }) {
   const payload = {
     question,
@@ -29,6 +34,7 @@ export function exportAsJson({ question, result }) {
     llm_used: result.llm_used,
     query_original: result.query_original,
     query_expansions: result.query_expansions,
+    expand_llm: result.expand_llm,
     chunk_graph_stats: result.chunk_graph_stats,
     experiment_chains: result.experiment_chains,
     citations: result.citations,
@@ -51,6 +57,9 @@ export function exportAsMarkdown({ question, result }) {
   ];
   if (result.query_expansions?.length) {
     lines.push("**Расширенные формулировки поиска:**");
+    if (result.expand_llm && EXPAND_LLM_EXPORT[result.expand_llm]) {
+      lines.push(`**Источник:** ${EXPAND_LLM_EXPORT[result.expand_llm]}`);
+    }
     result.query_expansions.forEach((q) => lines.push(`- ${q}`));
     lines.push("");
   }

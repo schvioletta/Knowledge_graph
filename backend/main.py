@@ -239,6 +239,7 @@ def discover_and_attach(payload: DiscoverAttachRequest):
         "detached": [_doc_to_dict(d) for d in result["detached"]],
         "query_original": expanded["original"],
         "query_expansions": expanded["expansions"],
+        "expand_llm": expanded.get("expand_llm"),
     }
 
 
@@ -252,6 +253,7 @@ def rag_ask(q: str = Query(..., min_length=1), auto_attach: bool = Query(True)):
     result = answer_question(rag_store, q, search_queries=queries)
     result["query_original"] = expanded["original"]
     result["query_expansions"] = expanded["expansions"]
+    result["expand_llm"] = expanded.get("expand_llm")
     if attach_info:
         result["attached"] = [_doc_to_dict(d) for d in attach_info["attached"]]
         result["detached"] = [_doc_to_dict(d) for d in attach_info["detached"]]

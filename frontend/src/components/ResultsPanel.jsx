@@ -89,12 +89,38 @@ function ExportMenu({ question, result }) {
   );
 }
 
-function QueryExpansions({ original, expansions }) {
+const EXPAND_LLM_LABELS = {
+  ollama: "Qwen · локально",
+  gigachat: "GigaChat · облако",
+};
+
+function QueryExpansions({ original, expansions, expandLlm }) {
   if (!expansions?.length) return null;
+  const sourceLabel = EXPAND_LLM_LABELS[expandLlm];
+  const sourceTitle =
+    expandLlm === "ollama"
+      ? "Перефразировки сгенерированы локально через Ollama (Qwen)"
+      : expandLlm === "gigachat"
+        ? "Перефразировки сгенерированы через GigaChat (облако, fallback)"
+        : null;
   return (
     <div className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
-        Поиск по расширенным формулировкам
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+          Поиск по расширенным формулировкам
+        </div>
+        {sourceLabel && (
+          <span
+            title={sourceTitle}
+            className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+              expandLlm === "ollama"
+                ? "border-secondary/40 text-secondary"
+                : "border-accent/40 text-accent"
+            }`}
+          >
+            {sourceLabel}
+          </span>
+        )}
       </div>
       <p className="mt-1.5 text-xs text-ink/70">
         <span className="text-ink/50">Исходный вопрос: </span>
@@ -219,6 +245,7 @@ function RagAnswer({ loading, result, question, onHighlightChain }) {
       <QueryExpansions
         original={result.query_original || question}
         expansions={result.query_expansions}
+        expandLlm={result.expand_llm}
       />
 
       <ExperimentChains

@@ -203,6 +203,50 @@ npm run dev
 Откройте `http://localhost:5173`. Фронтенд обращается к бэкенду на
 `http://localhost:8000` (переопределяется через `VITE_API_BASE`).
 
+### Расширение запроса (Ollama + Qwen)
+
+Поиск по документам может перефразировать вопрос через локальную модель
+(быстрее и без облачных токенов). Если Ollama недоступен в течение 15 с —
+expansion идёт через GigaChat (если задан `GIGACHAT_API_KEY`). В UI рядом
+с перефразировками показывается badge «Qwen · локально» или «GigaChat · облако».
+
+#### Установка Ollama
+
+**macOS — с сайта (рекомендуется):**
+
+1. Скачайте установщик: [https://ollama.com/download](https://ollama.com/download)
+2. Установите приложение и запустите его (иконка появится в menu bar)
+
+**macOS / Linux — через Homebrew:**
+
+```bash
+brew install ollama
+ollama serve   # если сервис ещё не запущен
+```
+
+#### Модель и проверка
+
+```bash
+ollama pull qwen2.5:7b
+ollama run qwen2.5:7b "Привет"          # быстрая проверка inference
+curl http://localhost:11434/api/tags    # API должен вернуть JSON со списком моделей
+```
+
+Для слабого железа можно взять меньшую модель: `ollama pull qwen2.5:3b` и
+указать `QUERY_EXPAND_MODEL=qwen2.5:3b` в `.env`.
+
+#### Переменные окружения
+
+Скопируйте из `.env.example` в `.env`:
+
+```env
+QUERY_EXPAND_BASE_URL=http://localhost:11434/v1
+QUERY_EXPAND_MODEL=qwen2.5:7b
+QUERY_EXPAND_TIMEOUT_SEC=15
+```
+
+После изменения `.env` перезапустите backend (`uvicorn`).
+
 ### Примеры запросов (соответствуют примерам из ТЗ)
 
 - «Какие методы обессоливания воды подходят при сульфатах, хлоридах, Ca, Mg,

@@ -5,7 +5,7 @@ import json
 import re
 from typing import Any
 
-from backend.llm_client import complete, is_configured
+from backend.rag.query_expand_llm import complete_query_expand, is_query_expand_available
 
 _SYSTEM_PROMPT = """Ты помогаешь улучшить поиск по техническим документам (горная металлургия, R&D).
 Перефразируй вопрос пользователя 2–3 альтернативными формулировками на том же языке,
@@ -37,15 +37,16 @@ def _normalize(text: str) -> str:
 
 
 def expand_query(question: str, max_variants: int = _DEFAULT_MAX) -> dict[str, Any]:
-    """Возвращает {original, expansions, all_queries, expanded}."""
+    """Возвращает {original, expansions, all_queries, expanded, expand_llm}."""
     original = question.strip()
     if not original:
         return {"original": "", "expansions": [], "all_queries": [], "expanded": False}
 
     expansions: list[str] = []
-    if is_configured():
+    expand_llm = None
+    if is_query_expand_available():
         prompt = f"Исходный вопрос:\n{original}\n\nДай {max_variants} перефразировки."
-        raw = complete(prompt, system=_SYSTEM_PROMPT, temperature=0.2)
+        raw, source = complete_query_expand(prompt, system=_SYSTEM_PROMPT, temperature=0.2)
         if raw:
             parsed = _extract_json_array(raw)
             if parsed:
@@ -58,6 +59,8 @@ def expand_query(question: str, max_variants: int = _DEFAULT_MAX) -> dict[str, A
                     if text and key not in seen and len(expansions) < max_variants:
                         expansions.append(text)
                         seen.add(key)
+                if expansions:
+                    expand_llm = source
 
     all_queries = [original] + expansions
     return {
@@ -65,4 +68,5 @@ def expand_query(question: str, max_variants: int = _DEFAULT_MAX) -> dict[str, A
         "expansions": expansions,
         "all_queries": all_queries,
         "expanded": len(expansions) > 0,
+        "expand_llm": expand_llm,
     }

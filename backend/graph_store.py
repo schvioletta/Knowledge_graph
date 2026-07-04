@@ -1,6 +1,7 @@
 """In-memory knowledge graph поверх NetworkX с сохранением в JSON."""
 from __future__ import annotations
 
+import inspect
 import itertools
 import json
 from pathlib import Path
@@ -9,6 +10,13 @@ from typing import Any, Optional
 import networkx as nx
 
 from backend.schema import Entity, EntityType, Relation, RelationType
+
+# NetworkX 3.x: link=; 2.x: links=
+_NODE_LINK_KW = (
+    {"link": "links"}
+    if "link" in inspect.signature(nx.node_link_data).parameters
+    else {"links": "links"}
+)
 
 
 class GraphStore:
@@ -30,12 +38,12 @@ class GraphStore:
 
     # ---------- персистентность ----------
     def save(self, path: str | Path) -> None:
-        data = nx.node_link_data(self.g, edges="links")
+        data = nx.node_link_data(self.g, **_NODE_LINK_KW)
         Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def load(self, path: str | Path) -> None:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        self.g = nx.node_link_graph(data, edges="links", multigraph=True, directed=True)
+        self.g = nx.node_link_graph(data, multigraph=True, directed=True, **_NODE_LINK_KW)
 
     # ---------- базовые выборки ----------
     def entities_by_type(self, etype: EntityType) -> list[dict[str, Any]]:
