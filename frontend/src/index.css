@@ -98,3 +98,35 @@ body {
   stroke-dasharray: 6 10;
   animation: flow-dash 1.4s linear infinite;
 }
+
+/* Подсветка ключевых сущностей в тексте ответа: светло-голубой цвет + мягкое
+   свечение (glow) без агрессивной анимации. Единый стиль для сущностей из БД
+   и графа знаний (тип сущности не меняет вид — только tooltip/клик). */
+.entity-highlight {
+  color: #7fdcff;
+  background: color-mix(in srgb, #00b4ff 12%, transparent);
+  border-radius: 4px;
+  padding: 0 3px;
+  cursor: pointer;
+  text-shadow: 0 0 6px color-mix(in srgb, #00b4ff 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #00b4ff 22%, transparent);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.entity-highlight:hover {
+  background: color-mix(in srgb, #00b4ff 22%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, #00b4ff 45%, transparent);
+}
+
+/* Курсор ожидания в потоковом ответе/Thinking — мягкое мигание, не резкое. */
+@keyframes caret-blink {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.8; }
+}
+
+.stream-caret::after {
+  content: "▍";
+  margin-left: 1px;
+  color: var(--color-primary);
+  animation: caret-blink 1s ease-in-out infinite;
+}

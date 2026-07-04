@@ -21,7 +21,7 @@ verify_ssl_certs=False: сертификаты GigaChat подписаны ко�
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Iterator, Optional
 
 _last_error: Optional[str] = None
 _client = None  # ленивый singleton GigaChat
@@ -42,7 +42,7 @@ def _get_client():
     return _client
 
 
-def _complete_gigachat(prompt: str, system: Optional[str], temperature: float) -> Optional[str]:
+def _build_payload(prompt: str, system: Optional[str], temperature: float):
     from gigachat.models import Chat, Messages, MessagesRole
 
     messages = []
@@ -52,9 +52,35 @@ def _complete_gigachat(prompt: str, system: Optional[str], temperature: float) -
 
     # GigaChat не принимает temperature=0 (диапазон > 0); 0 трактуем как
     # «максимально детерминированно» — минимально допустимое значение.
-    payload = Chat(messages=messages, temperature=max(temperature, 1e-6))
-    response = _get_client().chat(payload)
+    return Chat(messages=messages, temperature=max(temperature, 1e-6))
+
+
+def _complete_gigachat(prompt: str, system: Optional[str], temperature: float) -> Optional[str]:
+    response = _get_client().chat(_build_payload(prompt, system, temperature))
     return response.choices[0].message.content
+
+
+def complete_stream(
+    prompt: str, system: Optional[str] = None, temperature: float = 0.0
+) -> Iterator[str]:
+    """Потоковая генерация: yield-ит дельты текста по мере ответа GigaChat.
+    Если бэкенд не сконфигурирован или вызов упал — не бросает исключение
+    наружу, а просто ничего не yield-ит и выставляет get_last_error()
+    (вызывающий код проверяет, накопился ли текст, и деградирует так же,
+    как при complete() == None)."""
+    global _last_error
+    if not is_configured():
+        _last_error = "не сконфигурирован (нет GIGACHAT_API_KEY)"
+        return
+    try:
+        for chunk in _get_client().stream(_build_payload(prompt, system, temperature)):
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+        _last_error = None
+    except Exception as e:
+        _last_error = f"{type(e).__name__}: {e}"
+        print(f"[llm_client] Ошибка потокового вызова LLM: {_last_error}")
 
 
 def complete(prompt: str, system: Optional[str] = None, temperature: float = 0.0) -> Optional[str]:

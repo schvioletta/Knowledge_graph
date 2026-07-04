@@ -4,6 +4,8 @@ import {
   Download, ChevronDown, FileJson, FileType,
 } from "lucide-react";
 import DetailPanel from "./DetailPanel";
+import ThinkingBlock from "./ThinkingBlock";
+import AnswerContent from "./AnswerContent";
 import { exportAsJson, exportAsMarkdown, exportAsPdf } from "../utils/exportAnswer";
 
 const TABS = [
@@ -174,17 +176,13 @@ function ExperimentChains({ chains, onHighlightChain }) {
   );
 }
 
-function RagAnswer({ loading, result, question, onHighlightChain }) {
-  if (loading) {
-    return (
-      <div className="flex h-full items-center gap-2 p-5 text-sm text-ink/50">
-        <Loader2 size={14} className="animate-spin" />
-        Ищу подтверждение в загруженных документах…
-      </div>
-    );
-  }
+function RagAnswer({
+  result, question, streaming, thinkingSteps, streamAnswer, liveEntities, onEntityClick, onHighlightChain,
+}) {
+  const hasResult = !!result;
 
-  if (!result) {
+  // Пустое состояние — нет ни потока, ни результата, ни рассуждений.
+  if (!streaming && !hasResult && !thinkingSteps?.length) {
     return (
       <div className="flex h-full items-center p-5 text-sm text-ink/50">
         Задайте вопрос — если он совпадёт с загруженными документами или ссылками,
@@ -193,53 +191,74 @@ function RagAnswer({ loading, result, question, onHighlightChain }) {
     );
   }
 
-  const badgeClass = CONFIDENCE_STYLE[result.confidence] || CONFIDENCE_STYLE["нет данных"];
+  const badgeClass = CONFIDENCE_STYLE[result?.confidence] || CONFIDENCE_STYLE["нет данных"];
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Ответ по загруженным документам
-        </span>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${badgeClass}`}>
-          достоверность: {result.confidence}
-        </span>
-        {result.grounded && !result.llm_used && (
-          <span
-            className="flex items-center gap-1 rounded-full border border-orange-400/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-orange-300"
-            title="LLM не ответил — ниже показаны найденные фрагменты источников без синтеза в связный текст"
-          >
-            <AlertTriangle size={10} />
-            без LLM-синтеза
+      {hasResult && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Ответ по загруженным документам
           </span>
-        )}
-        {result.grounded && <ExportMenu question={question} result={result} />}
-      </div>
-
-      <QueryExpansions
-        original={result.query_original || question}
-        expansions={result.query_expansions}
-      />
-
-      <ExperimentChains
-        chains={result.experiment_chains}
-        onHighlightChain={onHighlightChain}
-      />
-
-      {result.chunk_graph_stats && (
-        <p className="text-xs text-ink/50">
-          Граф из фрагментов: {result.chunk_graph_stats.entities} сущностей,{" "}
-          {result.chunk_graph_stats.relations} связей
-          {result.chunk_graph_stats.chunks != null && ` · ${result.chunk_graph_stats.chunks} чанков`}
-          {result.chunk_graph_stats.llm_skipped && " (NER без LLM — только публикации)"}
-        </p>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${badgeClass}`}>
+            достоверность: {result.confidence}
+          </span>
+          {result.grounded && !result.llm_used && (
+            <span
+              className="flex items-center gap-1 rounded-full border border-orange-400/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-orange-300"
+              title="LLM не ответил — ниже показаны найденные фрагменты источников без синтеза в связный текст"
+            >
+              <AlertTriangle size={10} />
+              без LLM-синтеза
+            </span>
+          )}
+          {result.grounded && <ExportMenu question={question} result={result} />}
+        </div>
       )}
 
-      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
-        {result.answer}
-      </pre>
+      <ThinkingBlock steps={thinkingSteps} streaming={streaming} />
 
-      {result.citations.length > 0 && (
+      {hasResult && (
+        <>
+          <QueryExpansions
+            original={result.query_original || question}
+            expansions={result.query_expansions}
+          />
+          <ExperimentChains chains={result.experiment_chains} onHighlightChain={onHighlightChain} />
+          {result.chunk_graph_stats && (
+            <p className="text-xs text-ink/50">
+              Граф из фрагментов: {result.chunk_graph_stats.entities} сущностей,{" "}
+              {result.chunk_graph_stats.relations} связей
+              {result.chunk_graph_stats.chunks != null && ` · ${result.chunk_graph_stats.chunks} чанков`}
+              {result.chunk_graph_stats.llm_skipped && " (NER без LLM — только публикации)"}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Ответ: во время потока — накапливаемый текст с курсором; после — финальный
+          с подсветкой ключевых сущностей. */}
+      {hasResult ? (
+        <AnswerContent
+          text={result.answer}
+          entities={result.highlight_entities}
+          onEntityClick={onEntityClick}
+        />
+      ) : streamAnswer ? (
+        <AnswerContent
+          text={streamAnswer}
+          entities={liveEntities}
+          onEntityClick={onEntityClick}
+          streaming
+        />
+      ) : streaming ? (
+        <div className="flex items-center gap-2 text-sm text-ink/40">
+          <Loader2 size={13} className="animate-spin" />
+          Формирую ответ…
+        </div>
+      ) : null}
+
+      {hasResult && result.citations.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <div className="text-[11px] uppercase tracking-wide text-ink/50">Источники</div>
           <ul className="flex flex-col gap-1.5">
@@ -262,8 +281,8 @@ function RagAnswer({ loading, result, question, onHighlightChain }) {
 }
 
 export default function ResultsPanel({
-  activeTab, onTabChange, question, ragResult, ragLoading, node, detail, onExpand, onClose,
-  onHighlightChain,
+  activeTab, onTabChange, question, ragResult, node, detail, onExpand, onClose,
+  onHighlightChain, thinkingSteps, streamAnswer, streaming, liveEntities, onEntityClick,
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -292,9 +311,13 @@ export default function ResultsPanel({
       <div className="min-h-0 flex-1 overflow-y-auto">
         {activeTab === "documents" && (
           <RagAnswer
-            loading={ragLoading}
             result={ragResult}
             question={question}
+            streaming={streaming}
+            thinkingSteps={thinkingSteps}
+            streamAnswer={streamAnswer}
+            liveEntities={liveEntities}
+            onEntityClick={onEntityClick}
             onHighlightChain={onHighlightChain}
           />
         )}
