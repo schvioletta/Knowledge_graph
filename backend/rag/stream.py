@@ -147,7 +147,7 @@ def stream_answer_events(
     # 4. Извлечение сущностей и связей графа из найденных фрагментов (LLM-NER — один раз)
     yield {"type": "thinking", "stage": "entities",
            "text": "Извлекаю сущности и связи графа знаний из найденных фрагментов…"}
-    build = build_internal_graph(hits)
+    build = build_internal_graph(hits, store=store)
     highlight = highlight_entities_from_graph({"subgraph": build.gs.to_vis_json()}, hits)
     if highlight:
         yield {"type": "thinking", "stage": "entities",

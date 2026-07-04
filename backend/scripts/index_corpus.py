@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -44,8 +45,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--raw-root", type=Path, default=DEFAULT_RAW_ROOT, help="Корень корпуса")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Файл манифеста")
     parser.add_argument("--force", action="store_true", help="Переиндексировать даже без изменений")
+    parser.add_argument(
+        "--yandex",
+        action="store_true",
+        help="Метаданные через YandexGPT (INDEX_USE_YANDEX=1, нужны YANDEX_API_KEY/YANDEX_FOLDER_ID)",
+    )
     parser.add_argument("--limit", type=int, default=0, help="Макс. число файлов (0 = все, только без явного списка files)")
     args = parser.parse_args(argv)
+
+    if args.yandex:
+        os.environ["INDEX_USE_YANDEX"] = "1"
 
     if args.files:
         files: list[Path] = []

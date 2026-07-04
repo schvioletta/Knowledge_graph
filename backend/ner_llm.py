@@ -1,7 +1,8 @@
 """LLM-клиент для NER (backend/nlp_pipeline/ner_extract.py).
 
-При NER_USE_OLLAMA=1 — локальный Qwen через Ollama; при ошибке fallback на GigaChat
-(если задан GIGACHAT_API_KEY). Иначе только GigaChat, как раньше.
+При NER_USE_OLLAMA=1 — локальный Qwen через Ollama; при ошибке fallback на
+активный бэкенд llm_client (GigaChat или YandexGPT по LLM_BACKEND /
+INDEX_USE_YANDEX). Иначе только llm_client.
 """
 from __future__ import annotations
 
@@ -11,8 +12,10 @@ from typing import Optional
 from backend.llm_cache import get as cache_get
 from backend.llm_cache import make_key as cache_make_key
 from backend.llm_cache import put as cache_put
-from backend.llm_client import complete as complete_gigachat
-from backend.llm_client import is_configured as is_gigachat_configured
+from backend.llm_client import complete
+from backend.llm_client import get_last_error as llm_get_last_error
+from backend.llm_client import is_configured
+from backend.llm_client import llm_backend
 
 _CACHE_NS = "ner"
 _last_error: Optional[str] = None
@@ -47,7 +50,7 @@ def is_ollama_configured() -> bool:
 
 
 def is_ner_configured() -> bool:
-    return is_ollama_configured() or is_gigachat_configured()
+    return is_ollama_configured() or is_configured()
 
 
 def get_last_error() -> Optional[str]:
@@ -68,12 +71,17 @@ def _get_ollama_client():
 
 def _cache_key(prompt: str, system: Optional[str], temperature: float) -> str:
     temp = max(temperature, 1e-6)
+    backend = "ollama" if is_ollama_configured() else llm_backend()
+    model = _ollama_model() if backend == "ollama" else (
+        os.getenv("YANDEX_MODEL", "yandexgpt-5-pro")
+        if backend == "yandex"
+        else os.getenv("GIGACHAT_MODEL", "GigaChat")
+    )
     return cache_make_key(
         "ner",
-        "ollama" if is_ollama_configured() else "gigachat",
-        _ollama_model(),
-        _ollama_base_url(),
-        os.getenv("GIGACHAT_MODEL", "GigaChat"),
+        backend,
+        model,
+        _ollama_base_url() if backend == "ollama" else "",
         str(temp),
         system or "",
         prompt,
@@ -105,7 +113,7 @@ def complete_ner(
     global _last_error
 
     if not is_ner_configured():
-        _last_error = "не сконфигурирован (NER_USE_OLLAMA + модель или GIGACHAT_API_KEY)"
+        _last_error = "не сконфигурирован (NER_USE_OLLAMA + модель или LLM-ключи)"
         return None
 
     key = _cache_key(prompt, system, temperature)
@@ -128,13 +136,13 @@ def complete_ner(
             _last_error = f"Ollama: {type(e).__name__}: {e}"
             print(f"[ner_llm] {_last_error}")
 
-    if is_gigachat_configured():
-        result = complete_gigachat(prompt, system, temperature)
+    if is_configured():
+        result = complete(prompt, system, temperature)
         if result is not None:
             cache_put(_CACHE_NS, key, result)
             _last_error = None
             return result
-        _last_error = _last_error or "GigaChat fallback не удался"
+        _last_error = llm_get_last_error() or f"{llm_backend()} fallback не удался"
         return None
 
     return None

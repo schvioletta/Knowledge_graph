@@ -12,7 +12,8 @@ from typing import Any
 from backend.graph_store import GraphStore
 from backend.ner_llm import is_ner_configured
 from backend.nlp_pipeline.graph_writer import GraphWriter, _stable_id_num, infer_confidence
-from backend.nlp_pipeline.ner_extract import ExtractionResult, extract_chunk_entities
+from backend.nlp_pipeline.ner_cache import resolve_chunk_ner
+from backend.nlp_pipeline.ner_extract import ExtractionResult
 from backend.nlp_pipeline.resolve import AliasTable, resolve_entity
 from backend.nlp_pipeline.validate import validate_entity_attrs, validate_relation
 from backend.rag.experiment_chains import append_chain_step_links, extract_experiment_chains
@@ -190,6 +191,8 @@ class ChunkGraphBuild:
     gs: GraphStore
     writer: RagChunkGraphWriter
     chunks_processed: int = 0
+    ner_cache_hits: int = 0
+    ner_computed: int = 0
     llm_skipped: bool = False
     external_pubs: int = 0
 
@@ -203,8 +206,14 @@ def _empty_graph() -> dict[str, Any]:
     }
 
 
-def build_internal_graph(hits: list[dict[str, Any]]) -> ChunkGraphBuild:
-    """Фаза 1: строит граф из внутренних RAG-hits (LLM-NER по чанкам)."""
+def build_internal_graph(
+    hits: list[dict[str, Any]],
+    store: Any | None = None,
+) -> ChunkGraphBuild:
+    """Фаза 1: строит граф из внутренних RAG-hits (LLM-NER по чанкам).
+
+    store — Neo4jDocumentStore для lazy-записи ner в rag_chunks; без него кэш
+    из Neo4j всё равно читается, но новые результаты не персистятся."""
     gs = GraphStore()
     alias = AliasTable(":memory:")
     writer = RagChunkGraphWriter(gs, alias)
@@ -223,10 +232,19 @@ def build_internal_graph(hits: list[dict[str, Any]]) -> ChunkGraphBuild:
 
         results: list[ExtractionResult] = []
         for hit in doc_hits:
-            text = hit["chunk"].text
+            chunk = hit["chunk"]
+            text = chunk.text
             if not text.strip():
                 continue
-            results.append(extract_chunk_entities(text))
+            cached_ner = getattr(chunk, "ner", None)
+            result, ner_blob, from_cache = resolve_chunk_ner(text, cached_ner)
+            if from_cache:
+                build.ner_cache_hits += 1
+            else:
+                build.ner_computed += 1
+            if ner_blob and store is not None:
+                store.persist_chunk_ner(doc_id, chunk.id, ner_blob)
+            results.append(result)
             build.chunks_processed += 1
 
         if results:
@@ -271,6 +289,10 @@ def finalize_graph(build: ChunkGraphBuild) -> dict[str, Any]:
     }
     if build.llm_skipped:
         stats["llm_skipped"] = True
+    if build.ner_cache_hits:
+        stats["ner_cache_hits"] = build.ner_cache_hits
+    if build.ner_computed:
+        stats["ner_computed"] = build.ner_computed
 
     return {
         "subgraph": subgraph,

@@ -13,10 +13,11 @@ from typing import Literal, Optional
 from backend.llm_cache import get as cache_get
 from backend.llm_cache import make_key as cache_make_key
 from backend.llm_cache import put as cache_put
-from backend.llm_client import complete as complete_gigachat
-from backend.llm_client import is_configured as is_gigachat_configured
+from backend.llm_client import complete
+from backend.llm_client import is_configured
+from backend.llm_client import llm_backend
 
-ExpandSource = Literal["ollama", "gigachat"]
+ExpandSource = Literal["ollama", "gigachat", "yandex"]
 
 _CACHE_NS = "query_expand"
 _last_error: Optional[str] = None
@@ -40,7 +41,7 @@ def is_ollama_configured() -> bool:
 
 
 def is_query_expand_available() -> bool:
-    return is_ollama_configured() or is_gigachat_configured()
+    return is_ollama_configured() or is_configured()
 
 
 def get_last_error() -> Optional[str]:
@@ -69,6 +70,8 @@ def _expand_cache_key(prompt: str, system: Optional[str], temperature: float) ->
         "query_expand",
         os.getenv("QUERY_EXPAND_MODEL", ""),
         os.getenv("QUERY_EXPAND_BASE_URL", "http://localhost:11434/v1"),
+        llm_backend(),
+        os.getenv("YANDEX_MODEL", "yandexgpt-5-pro"),
         os.getenv("GIGACHAT_MODEL", "GigaChat"),
         str(temperature),
         system or "",
@@ -106,15 +109,16 @@ def complete_query_expand(
             _last_error = f"Ollama: {type(e).__name__}: {e}"
             print(f"[query_expand_llm] {_last_error}")
 
-    if is_gigachat_configured():
-        result = complete_gigachat(prompt, system, temperature)
+    if is_configured():
+        result = complete(prompt, system, temperature)
         if result:
             _last_error = None
-            cache_put(_CACHE_NS, key, json.dumps({"result": result, "source": "gigachat"}))
-            return result, "gigachat"
-        _last_error = "GigaChat fallback не удался"
+            source: ExpandSource = "yandex" if llm_backend() == "yandex" else "gigachat"
+            cache_put(_CACHE_NS, key, json.dumps({"result": result, "source": source}))
+            return result, source
+        _last_error = f"{llm_backend()} fallback не удался"
 
-    if not is_ollama_configured() and not is_gigachat_configured():
-        _last_error = "не сконфигурирован (нет QUERY_EXPAND_MODEL и GIGACHAT_API_KEY)"
+    if not is_ollama_configured() and not is_configured():
+        _last_error = "не сконфигурирован (нет QUERY_EXPAND_MODEL и LLM-ключей)"
 
     return None, None

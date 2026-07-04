@@ -218,6 +218,24 @@ class Neo4jDocumentStore:
         with self.driver.session() as s:
             s.run("MATCH (n:Entity {id: $id}) SET n += $props", id=doc_id, props=props)
 
+    def persist_chunk_ner(self, doc_id: str, chunk_id: str, ner: dict[str, Any]) -> None:
+        """Lazy-кэш: сохраняет NER в rag_chunks[].ner для повторных RAG-запросов."""
+        node = self._get_node(doc_id)
+        raw = node.get("rag_chunks") if node else None
+        if not raw:
+            return
+        chunks = json.loads(raw)
+        updated = False
+        for rec in chunks:
+            if rec.get("id") == chunk_id:
+                rec["ner"] = ner
+                updated = True
+                break
+        if updated:
+            self._update_node(doc_id, {
+                "rag_chunks": json.dumps(chunks, ensure_ascii=False),
+            })
+
     def _get_node(self, doc_id: str):
         with self.driver.session() as s:
             row = s.run("MATCH (n:Entity {id: $id}) RETURN n", id=doc_id).single()
@@ -261,6 +279,7 @@ class Neo4jDocumentStore:
 
         vecs = self._embed([c.text for c in chunks])
         chunk_records = self._chunk_records_from_blocks(doc_id, blocks, vecs)
+        chunk_records = self._maybe_precompute_ner(chunk_records)
 
         meta = DocumentMeta(
             id=doc_id,
@@ -277,6 +296,11 @@ class Neo4jDocumentStore:
         )
         self._write_node(meta, rag_chunks=chunk_records)
         return meta, False
+
+    def _maybe_precompute_ner(self, chunk_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        from backend.nlp_pipeline.ner_cache import precompute_ner_for_records
+
+        return precompute_ner_for_records(chunk_records)
 
     # ---------- корпусный индекс ----------
     def find_indexed_by_path(self, source_path: str) -> Optional[DocumentMeta]:
@@ -432,6 +456,7 @@ class Neo4jDocumentStore:
             }
             for i, c in enumerate(text_chunks)
         ]
+        chunk_records = self._maybe_precompute_ner(chunk_records)
         abstract_chunks = node.get("abstract_rag_chunks") or node.get("rag_chunks", "[]")
 
         props = {
@@ -519,6 +544,7 @@ class Neo4jDocumentStore:
                     "text": rec["text"],
                     "location": rec["location"],
                     "language": rec["language"],
+                    "ner": rec.get("ner"),
                 })
                 all_vecs.append(rec["embedding"])
 

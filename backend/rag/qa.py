@@ -239,7 +239,7 @@ def answer_question(
     # Внутренний граф строим один раз (LLM-NER по чанкам), из него берём highlight-
     # сущности, по ним ищем внешние источники, затем добавляем их в ТОТ ЖЕ граф
     # (дёшево, без повторного NER) — чтобы чанки Scholar/Patents стали узлами графа.
-    build = build_internal_graph(hits)
+    build = build_internal_graph(hits, store=store)
     highlight = highlight_entities_from_graph({"subgraph": build.gs.to_vis_json()}, hits)
 
     # Внешний поиск по ключевым словам из вопроса и сущностей графа. Никогда не

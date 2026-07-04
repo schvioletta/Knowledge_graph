@@ -13,7 +13,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-from backend.llm_client import complete, is_configured
+from backend.llm_client import complete_for_index, is_index_llm_configured
 from backend.nlp_pipeline.chunking import chunk_blocks
 from backend.nlp_pipeline.ingest import FileMeta, TextBlock
 from backend.nlp_pipeline.sections import SECTION_ORDER, extract_key_sections
@@ -157,7 +157,7 @@ def _llm_metadata(blocks: list[TextBlock], file_meta: FileMeta) -> Optional[Docu
         f"АННОТАЦИЯ:\n{abs_text[:4000]}\n\n"
         f"НАЧАЛО ДОКУМЕНТА:\n{preview}"
     )
-    raw = complete(prompt, system=_SYSTEM_PROMPT)
+    raw = complete_for_index(prompt, system=_SYSTEM_PROMPT)
     if not raw:
         return None
     parsed = _extract_json(raw)
@@ -178,7 +178,7 @@ def _llm_metadata(blocks: list[TextBlock], file_meta: FileMeta) -> Optional[Docu
 
 
 def extract_metadata(blocks: list[TextBlock], file_meta: FileMeta) -> DocumentMetadata:
-    if is_configured():
+    if is_index_llm_configured():
         llm_meta = _llm_metadata(blocks, file_meta)
         if llm_meta:
             return llm_meta
