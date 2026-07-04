@@ -6,14 +6,19 @@ GigaChat через backend.llm_client. Остальной пайплайн (NER
 """
 from __future__ import annotations
 
+import json
 import os
 from typing import Literal, Optional
 
+from backend.llm_cache import get as cache_get
+from backend.llm_cache import make_key as cache_make_key
+from backend.llm_cache import put as cache_put
 from backend.llm_client import complete as complete_gigachat
 from backend.llm_client import is_configured as is_gigachat_configured
 
 ExpandSource = Literal["ollama", "gigachat"]
 
+_CACHE_NS = "query_expand"
 _last_error: Optional[str] = None
 _ollama_client = None
 
@@ -59,6 +64,18 @@ def _complete_ollama(prompt: str, system: Optional[str], temperature: float) -> 
     return content.strip() if content else None
 
 
+def _expand_cache_key(prompt: str, system: Optional[str], temperature: float) -> str:
+    return cache_make_key(
+        "query_expand",
+        os.getenv("QUERY_EXPAND_MODEL", ""),
+        os.getenv("QUERY_EXPAND_BASE_URL", "http://localhost:11434/v1"),
+        os.getenv("GIGACHAT_MODEL", "GigaChat"),
+        str(temperature),
+        system or "",
+        prompt,
+    )
+
+
 def complete_query_expand(
     prompt: str,
     system: Optional[str] = None,
@@ -67,11 +84,22 @@ def complete_query_expand(
     """Возвращает (текст ответа, источник) или (None, None) при полном провале."""
     global _last_error
 
+    key = _expand_cache_key(prompt, system, temperature)
+    cached = cache_get(_CACHE_NS, key)
+    if cached is not None:
+        try:
+            payload = json.loads(cached)
+            _last_error = None
+            return payload["result"], payload["source"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
     if is_ollama_configured():
         try:
             result = _complete_ollama(prompt, system, temperature)
             if result:
                 _last_error = None
+                cache_put(_CACHE_NS, key, json.dumps({"result": result, "source": "ollama"}))
                 return result, "ollama"
             _last_error = "Ollama вернул пустой ответ"
         except Exception as e:
@@ -82,6 +110,7 @@ def complete_query_expand(
         result = complete_gigachat(prompt, system, temperature)
         if result:
             _last_error = None
+            cache_put(_CACHE_NS, key, json.dumps({"result": result, "source": "gigachat"}))
             return result, "gigachat"
         _last_error = "GigaChat fallback не удался"
 

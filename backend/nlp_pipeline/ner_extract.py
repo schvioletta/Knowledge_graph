@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
-from backend.llm_client import complete, is_configured
+from backend.ner_llm import complete_ner, is_ner_configured
 from backend.schema import EntityType, RelationType
 
 
@@ -135,11 +135,11 @@ def _extract_json(raw: str) -> Optional[dict[str, Any]]:
 
 
 def extract_chunk_entities(chunk_text: str) -> ExtractionResult:
-    if not is_configured():
+    if not is_ner_configured():
         return ExtractionResult()
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(schema_fragment=_schema_prompt_fragment())
-    raw = complete(chunk_text, system=system_prompt)
+    raw = complete_ner(chunk_text, system=system_prompt)
     if not raw:
         return ExtractionResult()
 

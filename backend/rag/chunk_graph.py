@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.graph_store import GraphStore
-from backend.llm_client import is_configured
+from backend.ner_llm import is_ner_configured
 from backend.nlp_pipeline.graph_writer import GraphWriter, _stable_id_num, infer_confidence
 from backend.nlp_pipeline.ner_extract import ExtractionResult, extract_chunk_entities
 from backend.nlp_pipeline.resolve import AliasTable, resolve_entity
@@ -208,7 +208,7 @@ def build_internal_graph(hits: list[dict[str, Any]]) -> ChunkGraphBuild:
     gs = GraphStore()
     alias = AliasTable(":memory:")
     writer = RagChunkGraphWriter(gs, alias)
-    build = ChunkGraphBuild(gs=gs, writer=writer, llm_skipped=not is_configured())
+    build = ChunkGraphBuild(gs=gs, writer=writer, llm_skipped=not is_ner_configured())
 
     by_doc: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for hit in hits:
