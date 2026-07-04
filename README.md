@@ -218,6 +218,38 @@ npm run dev
   пробел в данных (буквально пример из ТЗ), система честно сообщает об
   отсутствии данных вместо галлюцинации.
 
+## Индексация корпуса для RAG
+
+Двухэтапный RAG по документам из `data/raw/**`:
+
+1. **Офлайн-индексация** — метаданные (title, authors, source, year, geography,
+   language, domain, reliability_score, document_summary) + аннотация, разбитая
+   на чанки с эмбеддингами в Neo4j (`index_mode=abstract`).
+2. **По запросу в UI** — vector search по abstract-чанкам → top-5 документов →
+   полный текст перечанкируется и прикрепляется к чату (badge «авто» в
+   SourcesPanel). Auto-источники предыдущего запроса снимаются (replace);
+   вручную загруженные файлы не затрагиваются.
+
+```bash
+# Neo4j должен быть запущен (docker compose up -d neo4j)
+export YANDEX_API_KEY=...      # опционально — для метаданных через LLM
+export YANDEX_FOLDER_ID=...
+
+# Проиндексировать корпус (один раз или после добавления файлов)
+python -m backend.scripts.index_corpus
+
+# Переиндексация изменённых файлов — без --force; полная — с --force
+python -m backend.scripts.index_corpus --force
+
+# Смоук на N файлах
+python -m backend.scripts.index_corpus --limit 5
+```
+
+API:
+
+- `GET /api/rag/ask?q=...&auto_attach=true` — auto-attach + grounded ответ
+- `POST /api/rag/discover-and-attach` — только подбор и прикрепление документов
+
 ## Базовый RAG по PDF
 
 ```bash

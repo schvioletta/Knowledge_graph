@@ -27,6 +27,8 @@ export function exportAsJson({ question, result }) {
     confidence: result.confidence,
     grounded: result.grounded,
     llm_used: result.llm_used,
+    query_original: result.query_original,
+    query_expansions: result.query_expansions,
     citations: result.citations,
     exported_at: new Date().toISOString(),
   };
@@ -44,11 +46,18 @@ export function exportAsMarkdown({ question, result }) {
       result.grounded && !result.llm_used ? " _(без LLM-синтеза — фрагменты источников)_" : ""
     }`,
     "",
+  ];
+  if (result.query_expansions?.length) {
+    lines.push("**Расширенные формулировки поиска:**");
+    result.query_expansions.forEach((q) => lines.push(`- ${q}`));
+    lines.push("");
+  }
+  lines.push(
     "## Ответ",
     "",
     result.answer,
     "",
-  ];
+  );
   if (result.citations?.length) {
     lines.push("## Источники", "");
     for (const c of result.citations) {

@@ -40,7 +40,7 @@ export default function SourcesPanel({
         <span className="text-[11px] text-ink/40">
           {documents.length > 0
             ? `${documents.length} источник(ов)`
-            : "пока пусто — ответы идут по графу"}
+            : "пока пусто — при запросе подберутся из корпуса"}
         </span>
 
         <div className="ml-auto flex items-center gap-2">
@@ -107,6 +107,16 @@ export default function SourcesPanel({
             >
               {d.source_type === "link" ? <LinkIcon size={11} /> : <FileText size={11} />}
               <span className="max-w-[180px] truncate">{d.title}</span>
+              {d.attach_source === "auto" && (
+                <span className="rounded bg-primary/15 px-1 text-[9px] font-semibold uppercase text-primary">
+                  авто
+                </span>
+              )}
+              {(d.year || d.domain) && (
+                <span className="text-[9px] text-ink/40">
+                  {[d.year, d.domain !== "unknown" ? d.domain : null].filter(Boolean).join(" · ")}
+                </span>
+              )}
               {d.status === "ready" ? (
                 <span className="flex items-center gap-0.5 text-secondary">
                   <CheckCircle2 size={11} />

@@ -89,6 +89,31 @@ function ExportMenu({ question, result }) {
   );
 }
 
+function QueryExpansions({ original, expansions }) {
+  if (!expansions?.length) return null;
+  return (
+    <div className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">
+        Поиск по расширенным формулировкам
+      </div>
+      <p className="mt-1.5 text-xs text-ink/70">
+        <span className="text-ink/50">Исходный вопрос: </span>
+        {original}
+      </p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {expansions.map((q) => (
+          <li
+            key={q}
+            className="rounded border border-accent/30 bg-accent/10 px-2 py-1 text-xs leading-snug text-ink"
+          >
+            {q}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RagAnswer({ loading, result, question }) {
   if (loading) {
     return (
@@ -130,6 +155,11 @@ function RagAnswer({ loading, result, question }) {
         )}
         {result.grounded && <ExportMenu question={question} result={result} />}
       </div>
+
+      <QueryExpansions
+        original={result.query_original || question}
+        expansions={result.query_expansions}
+      />
 
       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
         {result.answer}

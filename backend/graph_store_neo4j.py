@@ -44,7 +44,7 @@ _JSON_ENCODED_ATTRS = ("_history",)
 # ответе /api/graph и /api/graph/{id}, где нужны только name/type/обычные атрибуты.
 # Сам RAG-стор читает/пишет это поле напрямую через свои Cypher-запросы, минуя
 # _node_dict.
-_HIDDEN_FROM_VIS = {"rag_chunks"}
+_HIDDEN_FROM_VIS = {"rag_chunks", "abstract_rag_chunks"}
 
 ENTITY_RELATION: dict[EntityType, str] = {
     EntityType.MATERIAL: "USES_MATERIAL",

@@ -41,8 +41,14 @@ _SYSTEM_PROMPT = """Ты — ассистент, отвечающий СТРОГ
 ОТВЕТ (каждый факт и число — со ссылкой [N]):"""
 
 
-def answer_question(store: Neo4jDocumentStore, question: str, top_k: int = 6) -> dict[str, Any]:
-    hits = store.search(question, top_k=top_k)
+def answer_question(
+    store: Neo4jDocumentStore,
+    question: str,
+    top_k: int = 6,
+    search_queries: list[str] | None = None,
+) -> dict[str, Any]:
+    queries = search_queries or [question]
+    hits = store.search(queries, top_k=top_k)
 
     if not hits:
         return {

@@ -45,7 +45,18 @@ export const api = {
     return res.json();
   },
 
-  ragAsk: (q) => getJson(`/api/rag/ask?q=${encodeURIComponent(q)}`),
+  ragAsk: (q, autoAttach = true) =>
+    getJson(`/api/rag/ask?q=${encodeURIComponent(q)}&auto_attach=${autoAttach}`),
+
+  discoverAndAttach: async (query, topDocs = 5) => {
+    const res = await fetch(`${BASE}/api/rag/discover-and-attach`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, top_docs: topDocs }),
+    });
+    if (!res.ok) await throwWithDetail(res);
+    return res.json();
+  },
 
   deleteDocument: async (id) => {
     const res = await fetch(`${BASE}/api/documents/${encodeURIComponent(id)}`, { method: "DELETE" });

@@ -24,6 +24,7 @@ from backend.nlp_pipeline.ingest import LOADERS, load_document
 from backend.rag.export_pdf import build_answer_pdf
 from backend.rag.ingest_link import fetch_url_blocks
 from backend.rag.qa import answer_question
+from backend.rag.query_expand import expand_query
 from backend.rag.store import Neo4jDocumentStore
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
@@ -159,6 +160,19 @@ class LinkRequest(BaseModel):
     url: str
 
 
+class DiscoverAttachRequest(BaseModel):
+    query: str
+    top_docs: int = 5
+
+
+def _doc_to_dict(doc) -> dict[str, Any]:
+    return asdict(doc)
+
+
+def _expand_and_search_queries(q: str) -> dict[str, Any]:
+    return expand_query(q)
+
+
 @app.post("/api/documents/upload")
 async def upload_document(file: UploadFile = File(...)):
     ext = Path(file.filename or "").suffix.lower()
@@ -183,7 +197,7 @@ async def upload_document(file: UploadFile = File(...)):
         # Уже есть документ с тем же текстом (см. add_document) — не тратим место
         # на дублирующую копию файла на диске, эмбеддинги тоже не пересчитывались.
         dest.unlink(missing_ok=True)
-    return {**asdict(doc), "duplicate": is_duplicate}
+    return {**_doc_to_dict(doc), "duplicate": is_duplicate}
 
 
 @app.post("/api/documents/link")
@@ -198,12 +212,12 @@ def add_link(payload: LinkRequest):
         raise HTTPException(status_code=400, detail=f"Не удалось загрузить ссылку: {e}") from e
 
     doc, is_duplicate = rag_store.add_document(title=title, source_type="link", source_name=url, blocks=blocks)
-    return {**asdict(doc), "duplicate": is_duplicate}
+    return {**_doc_to_dict(doc), "duplicate": is_duplicate}
 
 
 @app.get("/api/documents")
 def list_documents():
-    return [asdict(d) for d in rag_store.list_documents()]
+    return [_doc_to_dict(d) for d in rag_store.list_documents()]
 
 
 @app.delete("/api/documents/{doc_id}")
@@ -213,9 +227,35 @@ def delete_document(doc_id: str):
     return {"status": "deleted", "id": doc_id}
 
 
+@app.post("/api/rag/discover-and-attach")
+def discover_and_attach(payload: DiscoverAttachRequest):
+    q = payload.query.strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="query обязателен")
+    expanded = _expand_and_search_queries(q)
+    result = rag_store.activate_for_query(expanded["all_queries"], top_docs=payload.top_docs)
+    return {
+        "attached": [_doc_to_dict(d) for d in result["attached"]],
+        "detached": [_doc_to_dict(d) for d in result["detached"]],
+        "query_original": expanded["original"],
+        "query_expansions": expanded["expansions"],
+    }
+
+
 @app.get("/api/rag/ask")
-def rag_ask(q: str = Query(..., min_length=1)):
-    return answer_question(rag_store, q)
+def rag_ask(q: str = Query(..., min_length=1), auto_attach: bool = Query(True)):
+    expanded = _expand_and_search_queries(q)
+    queries = expanded["all_queries"]
+    attach_info = None
+    if auto_attach:
+        attach_info = rag_store.activate_for_query(queries)
+    result = answer_question(rag_store, q, search_queries=queries)
+    result["query_original"] = expanded["original"]
+    result["query_expansions"] = expanded["expansions"]
+    if attach_info:
+        result["attached"] = [_doc_to_dict(d) for d in attach_info["attached"]]
+        result["detached"] = [_doc_to_dict(d) for d in attach_info["detached"]]
+    return result
 
 
 class RagExportRequest(BaseModel):
