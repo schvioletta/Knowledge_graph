@@ -53,6 +53,17 @@ _MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 _EMBED_DIM = 384
 _DEFAULT_TOP_DOCS = 5
 
+# Порог релевантности при активации корпусных документов под запрос.
+# Раньше activate_for_query брал просто top-N по абстракт-сходству без порога —
+# на маленьком корпусе (напр. 6 документов при top_docs=5) это активировало
+# почти всё подряд, и слабо релевантные документы полнотекстово попадали в поиск
+# и «Источники» к любому запросу (см. диагностику: документ про электролит с 30
+# чанками всплывал везде). Теперь активируем только документы, чьё абстракт-
+# сходство не ниже max(ABS_FLOOR, TOP_RATIO * лучший_скор) — динамический отсев
+# документов, заметно слабее лучшего совпадения (адаптируется к силе запроса).
+_ACTIVATE_MIN_SCORE = float(os.getenv("RAG_ACTIVATE_MIN_SCORE", "0.35"))
+_ACTIVATE_TOP_RATIO = float(os.getenv("RAG_ACTIVATE_TOP_RATIO", "0.7"))
+
 
 def _now() -> str:
     return datetime.datetime.now().isoformat(timespec="seconds")
@@ -382,7 +393,13 @@ class Neo4jDocumentStore:
                 "MATCH (n:Entity {type: 'publication', source_type: 'corpus'}) "
                 "WHERE n.abstract_rag_chunks IS NOT NULL AND n.status = 'ready' RETURN n"
             ))
-        return self._search_chunks(rows, query, "abstract_rag_chunks", top_k, min_score)
+        # max_chunks_per_doc — честное обнаружение: каждый документ участвует
+        # ограниченным числом чанков, чтобы полнотекстовый (мис)индекс не давал
+        # одному документу непропорционально много совпадений (см. _DISCOVERY_CHUNK_CAP).
+        return self._search_chunks(
+            rows, query, "abstract_rag_chunks", top_k, min_score,
+            max_chunks_per_doc=_DISCOVERY_CHUNK_CAP,
+        )
 
     def detach_auto_documents(self) -> list[DocumentMeta]:
         with self.driver.session() as s:
@@ -459,12 +476,22 @@ class Neo4jDocumentStore:
             score = hit["score"]
             doc_scores[doc_id] = max(doc_scores.get(doc_id, 0.0), score)
 
-        top_ids = sorted(doc_scores, key=lambda d: doc_scores[d], reverse=True)[:top_docs]
         attached: list[DocumentMeta] = []
-        for doc_id in top_ids:
-            meta = self.activate_document(doc_id)
-            if meta:
-                attached.append(meta)
+        if doc_scores:
+            # Динамический порог: отбрасываем документы, заметно слабее лучшего
+            # совпадения — чтобы не активировать нерелевантные (см. коммент к
+            # _ACTIVATE_TOP_RATIO). Затем всё ещё ограничиваем сверху top_docs.
+            top_score = max(doc_scores.values())
+            floor = max(_ACTIVATE_MIN_SCORE, top_score * _ACTIVATE_TOP_RATIO)
+            top_ids = sorted(
+                (d for d, s in doc_scores.items() if s >= floor),
+                key=lambda d: doc_scores[d],
+                reverse=True,
+            )[:top_docs]
+            for doc_id in top_ids:
+                meta = self.activate_document(doc_id)
+                if meta:
+                    attached.append(meta)
         return {"attached": attached, "detached": detached}
 
     # ---------- поиск RAG ----------
@@ -497,6 +524,7 @@ class Neo4jDocumentStore:
         chunks_field: str,
         top_k: int,
         min_score: float,
+        max_chunks_per_doc: Optional[int] = None,
     ) -> list[dict[str, Any]]:
         queries = self._as_query_list(query)
         if not rows or not queries:
@@ -512,7 +540,10 @@ class Neo4jDocumentStore:
             raw = node.get(chunks_field)
             if not raw:
                 continue
-            for rec in json.loads(raw):
+            records = json.loads(raw)
+            if max_chunks_per_doc is not None:
+                records = records[:max_chunks_per_doc]
+            for rec in records:
                 all_chunks.append({
                     "id": rec["id"],
                     "doc_id": doc_id,
