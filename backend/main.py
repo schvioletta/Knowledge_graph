@@ -253,14 +253,23 @@ def rag_ask(q: str = Query(..., min_length=1), auto_attach: bool = Query(True)):
     attach_info = None
     if auto_attach:
         attach_info = rag_store.activate_for_query(queries)
-    result = answer_question(rag_store, q, search_queries=queries)
-    result["query_original"] = expanded["original"]
-    result["query_expansions"] = expanded["expansions"]
-    result["expand_llm"] = expanded.get("expand_llm")
-    if attach_info:
-        result["attached"] = [_doc_to_dict(d) for d in attach_info["attached"]]
-        result["detached"] = [_doc_to_dict(d) for d in attach_info["detached"]]
-    return result
+    try:
+        result = answer_question(rag_store, q, search_queries=queries)
+        result["query_original"] = expanded["original"]
+        result["query_expansions"] = expanded["expansions"]
+        result["expand_llm"] = expanded.get("expand_llm")
+        if attach_info:
+            result["attached"] = [_doc_to_dict(d) for d in attach_info["attached"]]
+            result["detached"] = [_doc_to_dict(d) for d in attach_info["detached"]]
+        return result
+    finally:
+        # Очистка временной базы: авто-подключённые под этот запрос корпусные
+        # документы возвращаем в abstract-режим, чтобы они не оставались в поиске
+        # и не «протекали» в следующий запрос (см. detach_auto_documents —
+        # затрагивает только attach_source='auto', загруженные файлы и постоянный
+        # индекс не трогает).
+        if auto_attach:
+            rag_store.detach_auto_documents()
 
 
 @app.get("/api/rag/ask/stream")
@@ -284,6 +293,13 @@ def rag_ask_stream(q: str = Query(..., min_length=1), auto_attach: bool = Query(
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:  # не роняем поток молча — сообщаем клиенту
             yield f"data: {json.dumps({'type': 'error', 'text': str(e)}, ensure_ascii=False)}\n\n"
+        finally:
+            # Очистка временной базы после завершения (или обрыва) потока: авто-
+            # подключённые корпусные документы возвращаем в abstract-режим, чтобы
+            # они не накапливались и не влияли на следующий запрос. Выполняется и
+            # при отключении клиента — генератор закрывается, finally отрабатывает.
+            if auto_attach:
+                rag_store.detach_auto_documents()
 
     return StreamingResponse(
         event_source(),

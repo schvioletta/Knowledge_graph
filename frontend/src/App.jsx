@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { PanelLeftClose, PanelLeftOpen, RotateCcw } from "lucide-react";
 import GraphView from "./components/GraphView";
@@ -116,6 +116,9 @@ export default function App() {
   const [activeHistoryId, setActiveHistoryId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [resultsHeight, setResultsHeight] = useState(loadResultsHeight);
+
+  // Блок результатов («По документам») — для авто-перехода после «Спросить».
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
@@ -298,6 +301,15 @@ export default function App() {
     setLiveEntities([]);
     setResultsTab("documents");
 
+    // Авто-переход к области результатов: плавно прокручиваем к блоку
+    // «По документам» и переводим на него фокус, чтобы пользователь сразу видел
+    // Thinking и последующий ответ, не ища область результатов вручную. rAF —
+    // чтобы прокрутка сработала после того, как React применит сброс состояния.
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      resultsRef.current?.focus({ preventScroll: true });
+    });
+
     const steps = [];
     try {
       await api.ragAskStream(question, {
@@ -454,7 +466,12 @@ export default function App() {
               Inline-height на grid — колонки h-full тянутся за ним синхронно;
               собственная ограниченная высота + overflow-hidden структурно
               исключают влияние длинного ответа на layout графа ниже. */}
-          <div className="border-t border-ink/10 p-4">
+          <div
+            ref={resultsRef}
+            tabIndex={-1}
+            aria-label="Результаты по документам"
+            className="scroll-mt-4 border-t border-ink/10 p-4 outline-none focus:outline-none focus-visible:outline-none"
+          >
             <div
               style={{ height: resultsHeight }}
               className={`grid w-full overflow-hidden rounded-md border border-ink/10 ${

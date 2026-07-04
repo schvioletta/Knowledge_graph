@@ -68,8 +68,8 @@ export default function Capabilities() {
   return (
     <section id="capabilities" className="mx-auto max-w-[1600px] px-6 py-20 md:py-28">
       <SectionHeading
-        eyebrow="Возможности"
-        title="Что уже реализовано"
+        eyebrow="Решение"
+        title="Предлагаемое решение"
         subtitle="Только реальные, работающие функции — без обещаний того, чего ещё нет в коде."
       />
 
