@@ -36,9 +36,9 @@ export default function RequirementsStatus() {
   return (
     <section id="status" className="mx-auto max-w-[1600px] px-6 py-20 md:py-28">
       <SectionHeading
-        eyebrow="Честная оценка"
-        title="Соответствие требованиям ТЗ"
-        subtitle="MVP, демонстрирующий архитектуру и ключевую пользовательскую петлю — без преувеличений о том, что ещё не реализовано."
+        eyebrow="Возможности"
+        title="Что уже реализовано"
+        subtitle="Представлены только реальные, работающие функции."
       />
 
       <div className="mt-12 grid grid-cols-1 gap-3 lg:grid-cols-2">
