@@ -48,6 +48,49 @@ export const api = {
   ragAsk: (q, autoAttach = true) =>
     getJson(`/api/rag/ask?q=${encodeURIComponent(q)}&auto_attach=${autoAttach}`),
 
+  // Потоковый ответ (SSE). Парсит поток событий text/event-stream вручную
+  // через fetch + ReadableStream (а не EventSource) — так можно ловить сетевые
+  // ошибки и не тянуть отдельный GET без контроля над отменой. Колбэки:
+  //   onEvent({type, ...}) — на каждое событие (thinking/answer_delta/done/error)
+  // Возвращает промис, который резолвится по завершении потока.
+  ragAskStream: async (q, { onEvent, signal, autoAttach = true } = {}) => {
+    const res = await fetch(
+      `${BASE}/api/rag/ask/stream?q=${encodeURIComponent(q)}&auto_attach=${autoAttach}`,
+      { headers: { Accept: "text/event-stream" }, signal },
+    );
+    if (!res.ok || !res.body) await throwWithDetail(res);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    // SSE-кадры разделены пустой строкой (\n\n); внутри кадра строки data:
+    const flushFrame = (frame) => {
+      const dataLines = frame
+        .split("\n")
+        .filter((l) => l.startsWith("data:"))
+        .map((l) => l.slice(5).trimStart());
+      if (!dataLines.length) return;
+      try {
+        onEvent?.(JSON.parse(dataLines.join("\n")));
+      } catch {
+        // неполный/битый кадр — пропускаем, следующий придёт целым
+      }
+    };
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        flushFrame(buffer.slice(0, sep));
+        buffer = buffer.slice(sep + 2);
+      }
+    }
+    if (buffer.trim()) flushFrame(buffer);
+  },
+
   discoverAndAttach: async (query, topDocs = 5) => {
     const res = await fetch(`${BASE}/api/rag/discover-and-attach`, {
       method: "POST",

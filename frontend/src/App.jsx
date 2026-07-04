@@ -95,6 +95,10 @@ export default function App() {
   const [ragResult, setRagResult] = useState(null);
   const [ragLoading, setRagLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState("");
+  const [thinkingSteps, setThinkingSteps] = useState([]);
+  const [streamAnswer, setStreamAnswer] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [liveEntities, setLiveEntities] = useState([]);
 
   const [history, setHistory] = useState(loadHistory);
   const [activeHistoryId, setActiveHistoryId] = useState(null);
@@ -265,32 +269,59 @@ export default function App() {
   const handleSearch = async (question) => {
     setSearchLoading(true);
     setRagLoading(true);
+    setStreaming(true);
     setGapEnabled(false);
     setCurrentQuestion(question);
     setActiveHistoryId(null);
     setSelectedNode(null);
     setDetail(null);
-    const ragPromise = api.ragAsk(question)
-      .then(async (r) => {
-        setRagResult(r);
-        applyChunkGraphToState(r, setNodesMap, setLinks, setHighlightIds, setFitSignal);
-        await refreshDocuments();
-        const entry = { id: crypto.randomUUID(), question, timestamp: Date.now(), ragResult: r };
-        setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
-        setActiveHistoryId(entry.id);
-        return r;
-      })
-      .catch(() => {
-        setRagResult(null);
-        applyChunkGraphToState(null, setNodesMap, setLinks, setHighlightIds, setFitSignal);
-        return null;
-      })
-      .finally(() => {
-        setSearchLoading(false);
-        setRagLoading(false);
-      });
+    setRagResult(null);
+    setThinkingSteps([]);
+    setStreamAnswer("");
+    setLiveEntities([]);
     setResultsTab("documents");
-    await ragPromise;
+
+    const steps = [];
+    try {
+      await api.ragAskStream(question, {
+        onEvent: (ev) => {
+          if (ev.type === "thinking") {
+            steps.push({ stage: ev.stage, text: ev.text });
+            setThinkingSteps([...steps]);
+            if (ev.entities) setLiveEntities(ev.entities);
+          } else if (ev.type === "answer_delta") {
+            setStreamAnswer((prev) => prev + ev.text);
+          } else if (ev.type === "done") {
+            const r = ev.result;
+            setRagResult(r);
+            applyChunkGraphToState(r, setNodesMap, setLinks, setHighlightIds, setFitSignal);
+            const entry = {
+              id: crypto.randomUUID(), question, timestamp: Date.now(),
+              ragResult: r, thinkingSteps: [...steps],
+            };
+            setHistory((prev) => [entry, ...prev].slice(0, HISTORY_LIMIT));
+            setActiveHistoryId(entry.id);
+          } else if (ev.type === "error") {
+            steps.push({ stage: "error", text: `Ошибка: ${ev.text}` });
+            setThinkingSteps([...steps]);
+          }
+        },
+      });
+      await refreshDocuments();
+    } catch {
+      setRagResult(null);
+      applyChunkGraphToState(null, setNodesMap, setLinks, setHighlightIds, setFitSignal);
+    } finally {
+      setSearchLoading(false);
+      setRagLoading(false);
+      setStreaming(false);
+    }
+  };
+
+  const handleEntityClick = (nodeId) => {
+    if (!nodeId) return;
+    setHighlightIds(new Set([nodeId]));
+    setFitSignal((s) => s + 1);
   };
 
   const handleHistorySelect = (entry) => {
@@ -298,6 +329,10 @@ export default function App() {
     setCurrentQuestion(entry.question);
     setActiveHistoryId(entry.id);
     setResultsTab("documents");
+    setStreaming(false);
+    setStreamAnswer("");
+    setThinkingSteps(entry.thinkingSteps || []);
+    setLiveEntities(entry.ragResult?.highlight_entities || []);
     applyChunkGraphToState(entry.ragResult, setNodesMap, setLinks, setHighlightIds, setFitSignal);
     setSelectedNode(null);
     setDetail(null);
@@ -521,6 +556,11 @@ export default function App() {
                   question={currentQuestion}
                   ragResult={ragResult}
                   ragLoading={ragLoading}
+                  thinkingSteps={thinkingSteps}
+                  streamAnswer={streamAnswer}
+                  streaming={streaming}
+                  liveEntities={liveEntities}
+                  onEntityClick={handleEntityClick}
                   node={selectedNode}
                   detail={detail}
                   onExpand={handleExpand}

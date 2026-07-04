@@ -10,6 +10,7 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 # Без этого .env никогда не читался: os.getenv() ниже (и в llm_client.py) видел
@@ -26,6 +27,7 @@ from backend.rag.ingest_link import fetch_url_blocks
 from backend.rag.qa import answer_question
 from backend.rag.query_expand import expand_query
 from backend.rag.store import Neo4jDocumentStore
+from backend.rag.stream import stream_answer_events
 from backend.sample_data import build_sample_graph
 from backend.schema import EntityType
 
@@ -258,6 +260,35 @@ def rag_ask(q: str = Query(..., min_length=1), auto_attach: bool = Query(True)):
         result["attached"] = [_doc_to_dict(d) for d in attach_info["attached"]]
         result["detached"] = [_doc_to_dict(d) for d in attach_info["detached"]]
     return result
+
+
+@app.get("/api/rag/ask/stream")
+def rag_ask_stream(q: str = Query(..., min_length=1), auto_attach: bool = Query(True)):
+    """SSE-версия /api/rag/ask: те же этапы, но каждый шаг конвейера и куски
+    финального ответа отдаются в реальном времени (см. backend/rag/stream.py).
+    Финальное событие done несёт тот же объект, что вернул бы /api/rag/ask."""
+    import json
+
+    expanded = _expand_and_search_queries(q)
+
+    def event_source():
+        try:
+            for event in stream_answer_events(
+                rag_store, q,
+                queries=expanded["all_queries"],
+                expansions=expanded["expansions"],
+                original=expanded["original"],
+                auto_attach=auto_attach,
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:  # не роняем поток молча — сообщаем клиенту
+            yield f"data: {json.dumps({'type': 'error', 'text': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class RagExportRequest(BaseModel):
