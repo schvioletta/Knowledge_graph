@@ -13,7 +13,7 @@ python-dotenv
 fastapi
 python-multipart
 uvicorn[standard]
-networkx
+networkx>=3.4
 neo4j
 python-docx
 python-pptx

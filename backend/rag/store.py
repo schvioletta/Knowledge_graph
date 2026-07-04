@@ -41,6 +41,12 @@ from neo4j import GraphDatabase
 
 from backend.nlp_pipeline.chunking import chunk_blocks
 from backend.nlp_pipeline.ingest import TextBlock, load_document
+from backend.rag.lexical_boost import (
+    BOOST_WEIGHT,
+    POOL_MULT,
+    extract_query_signals,
+    lexical_score,
+)
 from backend.rag.metadata_extract import DocumentMetadata
 
 _MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
@@ -524,17 +530,36 @@ class Neo4jDocumentStore:
         # max score по всем формулировкам запроса на каждый чанк
         scores = embeddings @ qvecs.T
         max_scores = scores.max(axis=1) if scores.ndim > 1 else scores
-        top_idx = np.argsort(-max_scores)[:top_k]
+        order = np.argsort(-max_scores)
+
+        # Пул кандидатов, прошедших семантический порог (order отсортирован по
+        # убыванию, поэтому на первом же чанке ниже min_score можно останавливаться).
+        # Берём шире top_k, чтобы лексический буст мог поднять чанк с точным
+        # числом/кодом/формулой, оказавшийся ниже по чистому вектору.
+        pool: list[tuple[int, float]] = []
+        for idx in order:
+            vs = float(max_scores[int(idx)])
+            if vs < min_score:
+                break
+            pool.append((int(idx), vs))
+            if len(pool) >= top_k * POOL_MULT:
+                break
+
+        signals = extract_query_signals(queries)
+        if not signals.empty and BOOST_WEIGHT > 0:
+            # Переранжируем пул: итог = косинус + WEIGHT * лексическое совпадение.
+            # Сам отчётный score оставляем косинусным (не ломаем калибровку confidence).
+            pool.sort(
+                key=lambda p: p[1] + BOOST_WEIGHT * lexical_score(signals, all_chunks[p[0]]["text"]),
+                reverse=True,
+            )
 
         results = []
-        for idx in top_idx:
-            score = float(max_scores[int(idx)])
-            if score < min_score:
-                continue
-            chunk = all_chunks[int(idx)]
+        for idx, vs in pool[:top_k]:
+            chunk = all_chunks[idx]
             results.append({
                 "chunk": _ChunkView(chunk),
-                "score": score,
+                "score": vs,
                 "document": docs.get(chunk["doc_id"]),
             })
         return results

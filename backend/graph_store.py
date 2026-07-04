@@ -11,11 +11,15 @@ import networkx as nx
 
 from backend.schema import Entity, EntityType, Relation, RelationType
 
-# NetworkX 3.x: link=; 2.x: links=
+# Имя kwarg для секции рёбер в node_link_data/graph менялось между версиями
+# NetworkX: исторически `link=` (deprecated в 3.4, удалён в 3.6), на смену
+# пришёл `edges=`. Старое имя `links` валидным kwarg-ом не было никогда —
+# поэтому выбираем по фактической сигнатуре: есть `link` (старый NetworkX) —
+# используем его, иначе `edges` (NetworkX 3.4+, вкл. установленный 3.6).
 _NODE_LINK_KW = (
     {"link": "links"}
     if "link" in inspect.signature(nx.node_link_data).parameters
-    else {"links": "links"}
+    else {"edges": "links"}
 )
 
 
