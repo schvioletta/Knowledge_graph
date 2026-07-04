@@ -1,4 +1,34 @@
-# React + Vite
+# Frontend — R&D Knowledge Graph
+
+React + Vite + `react-force-graph-2d`. Интерактивный force-граф, RAG-чат по
+документам и внешним источникам. Полное описание проекта — в корневом
+[`README.md`](../README.md) и [`backend/README.md`](../backend/README.md).
+
+## Запуск
+
+```bash
+npm install
+npm run dev      # http://localhost:5173, API на http://localhost:8000 (VITE_API_BASE)
+npm run build
+```
+
+## Ключевые части UI
+
+- **`App.jsx`** — оркестрация запроса; после «Спросить» плавный скролл + фокус на
+  блоке результатов «По документам».
+- **`components/ResultsPanel.jsx`** — ответ RAG, ход рассуждений (Thinking),
+  раздел «Источники» тремя категориями: внутренняя база, Google Scholar, Google
+  Patents (для внешних — авторы, год, журнал/патент, ссылка, ключевые слова,
+  релевантность).
+- **`components/GraphView.jsx`** — force-граф; внешние публикации помечены бейджем
+  `S`/`P` и цветом контура. Легенда — `components/FilterDock.jsx`, метаданные узла —
+  `components/DetailPanel.jsx`.
+- **`sections/`** — информационные блоки лендинга (архитектура, возможности,
+  пайплайн, статус требований).
+
+---
+
+## React + Vite (шаблон)
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

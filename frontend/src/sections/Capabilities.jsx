@@ -8,6 +8,7 @@ import {
   Languages,
   FileScan,
   Gauge,
+  Telescope,
 } from "lucide-react";
 import SectionHeading from "../components/ui/SectionHeading";
 import Card from "../components/ui/Card";
@@ -24,6 +25,12 @@ const CAPABILITIES = [
     icon: SearchCode,
     title: "Гибридный поиск",
     text: "Материал + процесс + условие + география + период, с числовыми диапазонами («сульфаты ≤300 мг/л»), в одном запросе.",
+    span: "lg:col-span-2",
+  },
+  {
+    icon: Telescope,
+    title: "Внешние источники: Scholar + Patents",
+    text: "По ключевым терминам из вопроса и найденного контекста автоматически подбираются научные публикации (Google Scholar) и патенты (Google Patents) — отдельными категориями, с авторами, годом, ссылкой и оценкой релевантности.",
     span: "lg:col-span-2",
   },
   {

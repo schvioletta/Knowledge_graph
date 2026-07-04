@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FolderInput, Cpu, Share2, SearchCode, Server, MonitorSmartphone, UserRound } from "lucide-react";
+import { FolderInput, Cpu, Share2, SearchCode, Telescope, Server, MonitorSmartphone, UserRound } from "lucide-react";
 import SectionHeading from "../components/ui/SectionHeading";
 import Card from "../components/ui/Card";
 
@@ -8,6 +8,7 @@ const NODES = [
   { icon: Cpu, title: "NLP-пайплайн", text: "ingest → chunk → NER → resolve → validate" },
   { icon: Share2, title: "Graph Store", text: "NetworkX (build) / Neo4j (serving)" },
   { icon: SearchCode, title: "Hybrid Retriever", text: "граф + числовые фильтры + LLM" },
+  { icon: Telescope, title: "Внешний поиск", text: "Google Scholar / Patents по ключевым словам" },
   { icon: Server, title: "FastAPI", text: "/api/graph, /api/search, /api/gaps" },
   { icon: MonitorSmartphone, title: "React UI", text: "force-граф, поиск, детали" },
   { icon: UserRound, title: "Исследователь", text: "вопрос → ответ → источники" },
