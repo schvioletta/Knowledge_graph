@@ -30,12 +30,12 @@ class GraphStore:
 
     # ---------- персистентность ----------
     def save(self, path: str | Path) -> None:
-        data = nx.node_link_data(self.g, link="links")
+        data = nx.node_link_data(self.g, edges="links")
         Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def load(self, path: str | Path) -> None:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        self.g = nx.node_link_graph(data, link="links", multigraph=True, directed=True)
+        self.g = nx.node_link_graph(data, edges="links", multigraph=True, directed=True)
 
     # ---------- базовые выборки ----------
     def entities_by_type(self, etype: EntityType) -> list[dict[str, Any]]:

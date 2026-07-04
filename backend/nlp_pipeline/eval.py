@@ -99,7 +99,7 @@ def main() -> None:
         print(
             "ВНИМАНИЕ: LLM не сконфигурирован — предсказание всегда будет пустым, "
             "метрики ниже не отражают реальное качество экстрактора. Задайте "
-            "YANDEX_API_KEY/YANDEX_FOLDER_ID и повторите запуск."
+            "GIGACHAT_API_KEY и повторите запуск."
         )
 
     files = sorted(Path(args.golden_dir).glob("*.json"))

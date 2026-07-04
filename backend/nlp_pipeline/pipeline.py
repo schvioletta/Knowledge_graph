@@ -207,7 +207,7 @@ def main() -> None:
 
     if not is_configured():
         _log(
-            "ВНИМАНИЕ: LLM не сконфигурирован (нет YANDEX_API_KEY/YANDEX_FOLDER_ID) — "
+            "ВНИМАНИЕ: LLM не сконфигурирован (нет GIGACHAT_API_KEY) — "
             "будут созданы только узлы Publication без извлечённых сущностей."
         )
 
