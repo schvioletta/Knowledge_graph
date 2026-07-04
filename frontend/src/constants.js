@@ -62,4 +62,5 @@ export const FILTERABLE_TYPES = Object.keys(TYPE_LABEL).filter((t) => t !== "gho
 
 export const EXAMPLE_QUERIES = [
   "Какого влияние условий электролиза на светлость и морфологию поверхности?",
+  "Как отчищать воду от свинца?",
 ];
