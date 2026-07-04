@@ -21,6 +21,18 @@ import { FILTERABLE_TYPES } from "./constants";
 const HISTORY_STORAGE_KEY = "kg-rag-history";
 const HISTORY_LIMIT = 50;
 
+const RESULTS_HEIGHT_KEY = "kg-results-height";
+const RESULTS_HEIGHT_DEFAULT = 380;
+const RESULTS_HEIGHT_MIN = 240;
+const RESULTS_HEIGHT_MAX = 900;
+
+function loadResultsHeight() {
+  const v = parseInt(localStorage.getItem(RESULTS_HEIGHT_KEY), 10);
+  return Number.isFinite(v) && v >= RESULTS_HEIGHT_MIN && v <= RESULTS_HEIGHT_MAX
+    ? v
+    : RESULTS_HEIGHT_DEFAULT;
+}
+
 function loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -103,10 +115,15 @@ export default function App() {
   const [history, setHistory] = useState(loadHistory);
   const [activeHistoryId, setActiveHistoryId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [resultsHeight, setResultsHeight] = useState(loadResultsHeight);
 
   useEffect(() => {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(RESULTS_HEIGHT_KEY, String(resultsHeight));
+  }, [resultsHeight]);
 
   const refreshDocuments = () => api.listDocuments().then(setDocuments);
 
@@ -324,6 +341,30 @@ export default function App() {
     setFitSignal((s) => s + 1);
   };
 
+  // Вертикальный ресайз блока результатов (история | по документам | схема графа).
+  // Тянем нижний drag-handle; высота применяется к grid'у сразу (колонки h-full
+  // следуют за ним), клампится и сохраняется в localStorage (см. эффект выше).
+  const startResultsResize = (e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = resultsHeight;
+    const onMove = (ev) => {
+      const next = Math.min(
+        RESULTS_HEIGHT_MAX,
+        Math.max(RESULTS_HEIGHT_MIN, startH + (ev.clientY - startY)),
+      );
+      setResultsHeight(next);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+    };
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   const handleHistorySelect = (entry) => {
     setRagResult(entry.ragResult);
     setCurrentQuestion(entry.question);
@@ -406,15 +447,105 @@ export default function App() {
           </div>
         </div>
 
-        {/* Дашборд: фильтры (сворачиваемая панель) | граф — фиксированной высоты
-            h-[640px], панель результатов сознательно ВНЕ этой сетки (см. ниже):
-            раньше она была третьей колонкой той же grid-строки, и длинный ответ
-            (особенно RAG-ответ с цитатами) раздувал высоту всей строки через
-            классический CSS grid min-height:auto — из-за этого «плыл» весь
-            график и страница ниже него. Вынос в отдельный блок с собственным
-            ограничением высоты структурно исключает этот баг: контент ответа
-            больше физически не может повлиять на размеры графа. */}
         <div className="mx-auto max-w-[1600px]">
+          {/* Блок результатов (История запросов | По документам | Схема графа) —
+              НАД фильтрами и графом. Высоту задаёт пользователь: вертикальный
+              ресайз нижним drag-handle, значение сохраняется в localStorage.
+              Inline-height на grid — колонки h-full тянутся за ним синхронно;
+              собственная ограниченная высота + overflow-hidden структурно
+              исключают влияние длинного ответа на layout графа ниже. */}
+          <div className="border-t border-ink/10 p-4">
+            <div
+              style={{ height: resultsHeight }}
+              className={`grid w-full overflow-hidden rounded-md border border-ink/10 ${
+                historyOpen ? "lg:grid-cols-[240px_1fr]" : "lg:grid-cols-[44px_1fr]"
+              }`}
+            >
+              <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden">
+                <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-2 py-2">
+                  {historyOpen && (
+                    <span className="pl-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/60">
+                      История запросов
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen((v) => !v)}
+                    aria-label={historyOpen ? "Свернуть панель истории" : "Развернуть панель истории"}
+                    aria-expanded={historyOpen}
+                    className="ml-auto rounded p-1.5 text-ink/60 transition hover:bg-ink/5 hover:text-ink"
+                  >
+                    {historyOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+                  </button>
+                </div>
+                {historyOpen && (
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <HistoryPanel
+                      history={history}
+                      activeId={activeHistoryId}
+                      onSelect={handleHistorySelect}
+                      onDelete={handleHistoryDelete}
+                      onClear={handleHistoryClear}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-h-0 min-w-0 overflow-hidden">
+                <ResultsPanel
+                  activeTab={resultsTab}
+                  onTabChange={setResultsTab}
+                  question={currentQuestion}
+                  ragResult={ragResult}
+                  ragLoading={ragLoading}
+                  thinkingSteps={thinkingSteps}
+                  streamAnswer={streamAnswer}
+                  streaming={streaming}
+                  liveEntities={liveEntities}
+                  onEntityClick={handleEntityClick}
+                  node={selectedNode}
+                  detail={detail}
+                  onExpand={handleExpand}
+                  onClose={() => { setSelectedNode(null); setDetail(null); }}
+                  onHighlightChain={handleHighlightChain}
+                />
+              </div>
+            </div>
+
+            {/* Нижний drag-handle вертикального ресайза — тянет высоту всех трёх
+                колонок сразу (см. startResultsResize / resultsHeight). */}
+            <div
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Изменить высоту блока результатов"
+              title="Потяните, чтобы изменить высоту"
+              onMouseDown={startResultsResize}
+              className="group mt-1 flex h-3 w-full cursor-ns-resize items-center justify-center rounded"
+            >
+              <div className="h-1 w-10 rounded-full bg-ink/20 transition group-hover:bg-primary/60" />
+            </div>
+          </div>
+
+          {/* История на мобильных — на десктопе она уже колонкой в сетке выше */}
+          <div className="border-t border-ink/10 p-4 lg:hidden">
+            <div className="h-[220px] overflow-hidden rounded-md border border-ink/10">
+              <HistoryPanel
+                history={history}
+                activeId={activeHistoryId}
+                onSelect={handleHistorySelect}
+                onDelete={handleHistoryDelete}
+                onClear={handleHistoryClear}
+              />
+            </div>
+          </div>
+
+          {/* Дашборд: фильтры (сворачиваемая панель) | граф — фиксированной высоты
+              h-[640px]. Панель результатов сознательно ВНЕ этой сетки (выше):
+              раньше она была третьей колонкой той же grid-строки, и длинный ответ
+              (особенно RAG-ответ с цитатами) раздувал высоту всей строки через
+              классический CSS grid min-height:auto — из-за этого «плыл» весь
+              граф. Отдельный блок с собственной высотой структурно исключает этот
+              баг: контент ответа не влияет на размеры графа. */}
           <div
             className={`grid h-[640px] w-full ${
               filterOpen ? "lg:grid-cols-[280px_1fr]" : "lg:grid-cols-[44px_1fr]"
@@ -508,81 +639,6 @@ export default function App() {
             />
           </div>
 
-          {/* Панель результатов — под графом, во всю ширину, с собственной
-              ограниченной высотой и внутренним скроллом (см. комментарий выше).
-              История запросов — сворачиваемая колонка слева от неё, тот же
-              паттерн (grid-cols + min-h-0/overflow-hidden), что и у фильтров
-              графа выше; открыта по умолчанию. */}
-          <div className="border-t border-ink/10 p-4">
-            <div
-              className={`grid h-[380px] w-full overflow-hidden rounded-md border border-ink/10 ${
-                historyOpen ? "lg:grid-cols-[240px_1fr]" : "lg:grid-cols-[44px_1fr]"
-              }`}
-            >
-              <div className="hidden border-r border-ink/10 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden">
-                <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-2 py-2">
-                  {historyOpen && (
-                    <span className="pl-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/60">
-                      История запросов
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setHistoryOpen((v) => !v)}
-                    aria-label={historyOpen ? "Свернуть панель истории" : "Развернуть панель истории"}
-                    aria-expanded={historyOpen}
-                    className="ml-auto rounded p-1.5 text-ink/60 transition hover:bg-ink/5 hover:text-ink"
-                  >
-                    {historyOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-                  </button>
-                </div>
-                {historyOpen && (
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    <HistoryPanel
-                      history={history}
-                      activeId={activeHistoryId}
-                      onSelect={handleHistorySelect}
-                      onDelete={handleHistoryDelete}
-                      onClear={handleHistoryClear}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="min-h-0 min-w-0 overflow-hidden">
-                <ResultsPanel
-                  activeTab={resultsTab}
-                  onTabChange={setResultsTab}
-                  question={currentQuestion}
-                  ragResult={ragResult}
-                  ragLoading={ragLoading}
-                  thinkingSteps={thinkingSteps}
-                  streamAnswer={streamAnswer}
-                  streaming={streaming}
-                  liveEntities={liveEntities}
-                  onEntityClick={handleEntityClick}
-                  node={selectedNode}
-                  detail={detail}
-                  onExpand={handleExpand}
-                  onClose={() => { setSelectedNode(null); setDetail(null); }}
-                  onHighlightChain={handleHighlightChain}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* История на мобильных — на десктопе она уже колонкой в сетке выше */}
-          <div className="border-t border-ink/10 p-4 lg:hidden">
-            <div className="h-[220px] overflow-hidden rounded-md border border-ink/10">
-              <HistoryPanel
-                history={history}
-                activeId={activeHistoryId}
-                onSelect={handleHistorySelect}
-                onDelete={handleHistoryDelete}
-                onClear={handleHistoryClear}
-              />
-            </div>
-          </div>
         </div>
       </section>
 

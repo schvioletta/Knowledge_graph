@@ -6,7 +6,9 @@ import {
 import DetailPanel from "./DetailPanel";
 import ThinkingBlock from "./ThinkingBlock";
 import AnswerContent from "./AnswerContent";
+import HighlightedText from "./HighlightedText";
 import { exportAsJson, exportAsMarkdown, exportAsPdf } from "../utils/exportAnswer";
+import { cleanLocation, cleanSnippet } from "../utils/sourceFormat";
 
 const TABS = [
   { id: "documents", label: "По документам", icon: FileSearch },
@@ -289,17 +291,35 @@ function RagAnswer({
         <div className="flex flex-col gap-1.5">
           <div className="text-[11px] uppercase tracking-wide text-ink/50">Источники</div>
           <ul className="flex flex-col gap-1.5">
-            {result.citations.map((c) => (
-              <li key={c.index} className="rounded border border-ink/15 bg-surface px-2.5 py-1.5 text-xs">
-                <div className="flex items-center gap-1.5 text-ink/80">
-                  <span className="font-semibold text-primary">[{c.index}]</span>
-                  {c.source_type === "link" ? <LinkIcon size={11} /> : <FileText size={11} />}
-                  <span className="truncate">{c.title}</span>
-                  <span className="ml-auto shrink-0 text-ink/40">{c.location}</span>
-                </div>
-                <p className="mt-1 line-clamp-2 text-ink/50">{c.snippet}</p>
-              </li>
-            ))}
+            {result.citations.map((c) => {
+              const location = cleanLocation(c.location);
+              const isLink = c.source_type === "link";
+              return (
+                <li key={c.index} className="rounded border border-ink/15 bg-surface px-2.5 py-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 text-ink/80">
+                    <span className="font-semibold text-primary">[{c.index}]</span>
+                    {isLink ? <LinkIcon size={11} /> : <FileText size={11} />}
+                    {isLink && c.source_name ? (
+                      <a
+                        href={c.source_name}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="source-glow truncate underline-offset-2 hover:underline"
+                        title={c.source_name}
+                      >
+                        {c.title}
+                      </a>
+                    ) : (
+                      <span className="source-glow truncate" title={c.title}>{c.title}</span>
+                    )}
+                    {location && <span className="ml-auto shrink-0 text-ink/40">{location}</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-ink/50">
+                    <HighlightedText text={cleanSnippet(c.snippet)} entities={result.highlight_entities} />
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

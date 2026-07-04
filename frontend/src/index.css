@@ -118,6 +118,14 @@ body {
   box-shadow: 0 0 8px color-mix(in srgb, #00b4ff 45%, transparent);
 }
 
+/* Ненавязчивая подсветка в списке источников: светло-голубой + мягкое свечение,
+   в той же гамме, что .entity-highlight, но без фона/рамки/курсора — это не
+   интерактивный элемент, а просто выделение названий/сущностей в цитатах. */
+.source-glow {
+  color: #7fdcff;
+  text-shadow: 0 0 5px color-mix(in srgb, #00b4ff 45%, transparent);
+}
+
 /* Курсор ожидания в потоковом ответе/Thinking — мягкое мигание, не резкое. */
 @keyframes caret-blink {
   0%, 100% { opacity: 0.15; }
