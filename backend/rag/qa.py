@@ -103,7 +103,7 @@ def answer_question(
         # тишина и не выдумка. Причина фолбэка — не общая, а конкретная: «ключ не задан» и
         # «ключ задан, но вызов упал» требуют разных действий от того, кто это читает.
         if not llm_configured():
-            reason = "LLM не настроен (нет YANDEX_API_KEY/YANDEX_FOLDER_ID — см. .env.example)"
+            reason = "LLM не настроен (нет GIGACHAT_API_KEY — см. .env.example)"
         else:
             reason = f"вызов LLM не удался ({llm_last_error() or 'неизвестная ошибка'})"
         answer = f"{reason}. Показаны наиболее релевантные фрагменты источников:\n\n" + "\n\n".join(

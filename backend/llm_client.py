@@ -1,16 +1,22 @@
-"""Клиент для вызова YandexGPT в экстракторе сущностей и в RAG-чате.
+"""Клиент для вызова LLM в экстракторе сущностей, извлечении метаданных и RAG-чате.
 
-Единая точка входа — `complete()`. Ключ и folder ID берутся из переменных
-окружения YANDEX_API_KEY/YANDEX_FOLDER_ID (не хранятся в коде — иначе секрет
-попадёт в git; см. .env.example — .env подхватывается load_dotenv() в
-backend/main.py). YANDEX_MODEL по умолчанию "yandexgpt-5-pro".
+Основной бэкенд — GigaChat (Sber). Ключ берётся из переменной окружения
+GIGACHAT_API_KEY (не хранится в коде — иначе секрет попадёт в git; .env
+подхватывается load_dotenv() в backend/main.py и в CLI-скриптах). Модель —
+GIGACHAT_MODEL (по умолчанию "GigaChat"), scope — GIGACHAT_SCOPE (по умолчанию
+"GIGACHAT_API_PERS" для физлиц; для юрлиц — "GIGACHAT_API_CORP").
 
-Если бэкенд не сконфигурирован или вызов упал, `complete()` возвращает None —
-вызывающий код должен уметь работать без LLM (детерминированный fallback).
-`get_last_error()` хранит причину последнего провала — не для управления
-потоком, а чтобы вызывающий код (например, RAG-ответ) мог явно показать
-пользователю, ПОЧЕМУ он получил fallback: ключ не задан — это не то же самое,
-что ключ задан, но API вернул ошибку.
+Единая точка входа — `complete()`. Если бэкенд не сконфигурирован или вызов
+упал, `complete()` возвращает None — вызывающий код должен уметь работать без
+LLM (детерминированный fallback). `get_last_error()` хранит причину последнего
+провала — не для управления потоком, а чтобы вызывающий код (например, RAG-ответ)
+мог явно показать пользователю, ПОЧЕМУ он получил fallback: ключ не задан — это
+не то же самое, что ключ задан, но API вернул ошибку.
+
+verify_ssl_certs=False: сертификаты GigaChat подписаны корневым УЦ Минцифры,
+которого нет в стандартном trust store — без этого каждый вызов падал бы на
+проверке SSL. Клиент кэшируется (лениво) между вызовами: получение OAuth-токена
+по ключу — сетевой запрос, незачем делать его на каждый чанк.
 """
 from __future__ import annotations
 
@@ -18,35 +24,36 @@ import os
 from typing import Optional
 
 _last_error: Optional[str] = None
+_client = None  # ленивый singleton GigaChat
 
 
-def _complete_yandexgpt(prompt: str, system: Optional[str], temperature: float) -> Optional[str]:
-    import openai
+def _get_client():
+    """Ленивая инициализация клиента GigaChat (один OAuth-токен на процесс)."""
+    global _client
+    if _client is None:
+        from gigachat import GigaChat
 
-    folder_id = os.environ["YANDEX_FOLDER_ID"]
-    api_key = os.environ["YANDEX_API_KEY"]
-    model = os.getenv("YANDEX_MODEL", "yandexgpt-5-pro")
+        _client = GigaChat(
+            credentials=os.environ["GIGACHAT_API_KEY"],
+            scope=os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS"),
+            model=os.getenv("GIGACHAT_MODEL", "GigaChat"),
+            verify_ssl_certs=False,
+        )
+    return _client
 
-    client = openai.OpenAI(
-        api_key=api_key,
-        base_url="https://ai.api.cloud.yandex.net/v1",
-    )
+
+def _complete_gigachat(prompt: str, system: Optional[str], temperature: float) -> Optional[str]:
+    from gigachat.models import Chat, Messages, MessagesRole
+
     messages = []
     if system:
-        messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
+        messages.append(Messages(role=MessagesRole.SYSTEM, content=system))
+    messages.append(Messages(role=MessagesRole.USER, content=prompt))
 
-    # chat.completions, а не более новый responses — это классический
-    # OpenAI-совместимый эндпоинт, который реально поддерживают сторонние
-    # шлюзы вроде Yandex Cloud; responses.create() существует в openai-python
-    # SDK, но шлюз может не реализовывать сам эндпоинт /v1/responses, и вызов
-    # тихо падал в общий except ниже, маскируясь под «LLM недоступен».
-    response = client.chat.completions.create(
-        model=f"gpt://{folder_id}/{model}",
-        messages=messages,
-        temperature=temperature,
-        max_tokens=2000,
-    )
+    # GigaChat не принимает temperature=0 (диапазон > 0); 0 трактуем как
+    # «максимально детерминированно» — минимально допустимое значение.
+    payload = Chat(messages=messages, temperature=max(temperature, 1e-6))
+    response = _get_client().chat(payload)
     return response.choices[0].message.content
 
 
@@ -56,10 +63,10 @@ def complete(prompt: str, system: Optional[str] = None, temperature: float = 0.0
     Причина — в get_last_error()."""
     global _last_error
     if not is_configured():
-        _last_error = "не сконфигурирован (нет YANDEX_API_KEY/YANDEX_FOLDER_ID)"
+        _last_error = "не сконфигурирован (нет GIGACHAT_API_KEY)"
         return None
     try:
-        result = _complete_yandexgpt(prompt, system, temperature)
+        result = _complete_gigachat(prompt, system, temperature)
         _last_error = None
         return result
     except Exception as e:
@@ -69,7 +76,7 @@ def complete(prompt: str, system: Optional[str] = None, temperature: float = 0.0
 
 
 def is_configured() -> bool:
-    return bool(os.getenv("YANDEX_API_KEY") and os.getenv("YANDEX_FOLDER_ID"))
+    return bool(os.getenv("GIGACHAT_API_KEY"))
 
 
 def get_last_error() -> Optional[str]:
