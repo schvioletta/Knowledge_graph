@@ -97,17 +97,20 @@ function ExportMenu({ question, result }) {
 const EXPAND_LLM_LABELS = {
   ollama: "Qwen · локально",
   gigachat: "GigaChat · облако",
+  yandex: "Alice · облако",
 };
 
 function QueryExpansions({ original, expansions, expandLlm }) {
   if (!expansions?.length) return null;
   const sourceLabel = EXPAND_LLM_LABELS[expandLlm];
   const sourceTitle =
-    expandLlm === "ollama"
-      ? "Перефразировки сгенерированы локально через Ollama (Qwen)"
+    expandLlm === "yandex"
+      ? "Перефразировки сгенерированы через Yandex Alice (облако)"
       : expandLlm === "gigachat"
-        ? "Перефразировки сгенерированы через GigaChat (облако, fallback)"
-        : null;
+        ? "Перефразировки сгенерированы через GigaChat (облако)"
+        : expandLlm === "ollama"
+          ? "Перефразировки сгенерированы локально через Ollama (Qwen, fallback)"
+          : null;
   return (
     <div className="rounded-md border border-primary/25 bg-primary/5 px-3 py-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -120,7 +123,9 @@ function QueryExpansions({ original, expansions, expandLlm }) {
             className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
               expandLlm === "ollama"
                 ? "border-secondary/40 text-secondary"
-                : "border-accent/40 text-accent"
+                : expandLlm === "yandex"
+                  ? "border-yellow-500/40 text-yellow-400"
+                  : "border-accent/40 text-accent"
             }`}
           >
             {sourceLabel}

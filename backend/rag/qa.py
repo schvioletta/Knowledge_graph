@@ -166,7 +166,7 @@ def fallback_answer(hits: list[dict[str, Any]]) -> str:
     с указанием источников, а не тишина и не выдумка. Причина — конкретная:
     «ключ не задан» и «ключ задан, но вызов упал» требуют разных действий."""
     if not llm_configured():
-        reason = "LLM не настроен (нет GIGACHAT_API_KEY — см. .env.example)"
+        reason = "LLM не настроен (нет YANDEX_API_KEY/YANDEX_FOLDER_ID или GIGACHAT_API_KEY — см. .env.example)"
     else:
         reason = f"вызов LLM не удался ({llm_last_error() or 'неизвестная ошибка'})"
     return f"{reason}. Показаны наиболее релевантные фрагменты источников:\n\n" + "\n\n".join(

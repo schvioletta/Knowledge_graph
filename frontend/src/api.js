@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// Пустой BASE → запросы на тот же origin (Vite проксирует /api на backend)
+const BASE = import.meta.env.VITE_API_BASE ?? "";
 
 async function getJson(path) {
   const res = await fetch(`${BASE}${path}`);

@@ -11,7 +11,25 @@ else
 PYTHON ?= python3
 endif
 
-NPM ?= npm
+# Node.js / npm: системный PATH или nvm (npm — symlink на скрипт с #!/usr/bin/env node,
+# поэтому node должен быть в PATH через export, а не только prefix перед вызовом npm).
+NODE := $(shell command -v node 2>/dev/null)
+ifeq ($(NODE),)
+NODE := $(shell ls $(HOME)/.nvm/versions/node/*/bin/node 2>/dev/null | tail -1)
+endif
+NODE_BIN_DIR := $(dir $(NODE))
+NPM := $(shell command -v npm 2>/dev/null)
+ifeq ($(NPM),)
+NPM := $(NODE_BIN_DIR)npm
+endif
+ifeq ($(NPM),npm)
+# node и npm не найдены — команды frontend упадут с понятной ошибкой
+endif
+
+# Обёртка: гарантирует node в PATH для npm/vite (shebang /usr/bin/env node).
+define RUN_NPM
+	cd $(1) && export PATH="$(NODE_BIN_DIR):$$PATH" && $(NPM) $(2)
+endef
 
 help:
 	@echo "Команды:"
@@ -31,20 +49,20 @@ install-backend:
 	$(PYTHON) -m pip install -r requirements.txt
 
 install-frontend:
-	cd frontend && $(NPM) install
+	$(call RUN_NPM,frontend,install)
 
 sample-data:
 	$(PYTHON) -m backend.sample_data
 
 backend:
-	GRAPH_DATA_PATH=$(GRAPH_DATA_PATH) $(PYTHON) -m uvicorn backend.main:app --reload --port $(PORT)
+	GRAPH_DATA_PATH=$(GRAPH_DATA_PATH) $(PYTHON) -m uvicorn backend.main:app --reload --host 0.0.0.0 --port $(PORT)
 
 frontend:
-	cd frontend && $(NPM) run dev
+	$(call RUN_NPM,frontend,run dev)
 
 dev:
-	@echo "Backend: http://localhost:$(PORT)  |  Frontend: http://localhost:5173"
+	@echo "Backend: http://0.0.0.0:$(PORT)  |  Frontend: http://0.0.0.0:5173"
 	@trap 'kill 0' INT TERM; \
-	GRAPH_DATA_PATH=$(GRAPH_DATA_PATH) $(PYTHON) -m uvicorn backend.main:app --reload --port $(PORT) & \
-	cd frontend && $(NPM) run dev; \
+	GRAPH_DATA_PATH=$(GRAPH_DATA_PATH) $(PYTHON) -m uvicorn backend.main:app --reload --host 0.0.0.0 --port $(PORT) & \
+	$(call RUN_NPM,frontend,run dev); \
 	wait

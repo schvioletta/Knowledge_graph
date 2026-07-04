@@ -56,7 +56,7 @@ def _gigachat_model() -> str:
 
 
 def _yandex_model() -> str:
-    return os.getenv("YANDEX_MODEL", "yandexgpt-5-pro")
+    return os.getenv("YANDEX_MODEL", "aliceai-llm-flash")
 
 
 def is_yandex_configured() -> bool:
@@ -265,6 +265,33 @@ def complete(prompt: str, system: Optional[str] = None, temperature: float = 0.0
 
 def _active_model() -> str:
     return _yandex_model() if llm_backend() == "yandex" else _gigachat_model()
+
+
+def active_model() -> str:
+    """Имя модели активного облачного бэкенда (YANDEX_MODEL или GIGACHAT_MODEL)."""
+    return _active_model()
+
+
+def format_llm_startup_message() -> str:
+    """Строка для лога при старте процесса: бэкенд, модель, готовность."""
+    backend = llm_backend()
+    model = _active_model()
+    if is_configured():
+        status = "готов"
+    elif backend == "yandex":
+        status = "не настроен (нет YANDEX_API_KEY/YANDEX_FOLDER_ID)"
+    else:
+        status = "не настроен (нет GIGACHAT_API_KEY)"
+
+    lines = [f"[llm] облако: {backend} / {model} — {status}"]
+    qm = os.getenv("QUERY_EXPAND_MODEL", "").strip()
+    if qm:
+        lines.append(f"[llm] query expand fallback: ollama / {qm}")
+    return "\n".join(lines)
+
+
+def log_llm_startup() -> None:
+    print(format_llm_startup_message(), flush=True)
 
 
 def complete_yandex(

@@ -71,6 +71,13 @@ rag_store = Neo4jDocumentStore()
 
 
 @app.on_event("startup")
+def log_llm_config() -> None:
+    from backend.llm_client import log_llm_startup
+
+    log_llm_startup()
+
+
+@app.on_event("startup")
 def check_rag_store() -> None:
     # RAG-хранилище всегда в Neo4j (см. rag_store = Neo4jDocumentStore() выше),
     # независимо от GRAPH_BACKEND для основного графа — падаем сразу и понятно,
